@@ -15,18 +15,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.KeyValueTextInputFormat;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-import ch.epfl.advdatabase.netflix.setting.IOInfo;
-
 public  class ColNormMatrix {
 	
-	public static JobConf getConfTransMatrix(String input, String output) throws IOException {
-		JobConf conf = new JobConf();
+	public static JobConf getConfTransMatrix(Configuration con, Class cla, String input, String output) throws IOException {
+		JobConf conf = new JobConf(con, cla);
 		conf.setJobName("transpose matrix-row major");
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(Text.class);
@@ -35,12 +32,13 @@ public  class ColNormMatrix {
 		//conf.setInputFormat(KeyValueTextInputFormat.class);
 		conf.setMapperClass(TransposeMapper.class);
 		conf.setReducerClass(TransposeReducer.class);
-		
+		conf.setNumMapTasks(150);
+		conf.setNumReduceTasks(150);
 		//clear previous output
 		FileInputFormat.addInputPath(conf, new Path(input));
 		FileOutputFormat.setOutputPath(conf, new Path(output));
 		
-		FileSystem fs = FileSystem.get(new Configuration());
+		FileSystem fs = FileSystem.get(conf);
 		fs.delete(new Path(output), true);
 		
 		return conf;

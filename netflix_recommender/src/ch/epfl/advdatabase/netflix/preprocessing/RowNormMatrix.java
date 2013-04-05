@@ -6,7 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -14,24 +14,18 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.jobcontrol.Job;
-import org.apache.hadoop.mapred.jobcontrol.JobControl;
-import org.apache.hadoop.util.Tool;
 
-import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeMapper;
-import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeReducer;
 import ch.epfl.advdatabase.netflix.setting.IOInfo;
 
 public  class RowNormMatrix  {
-	public static JobConf getConfRNormMatrix(String input, String output) throws IOException {
-		JobConf conf = new JobConf();
+	public static JobConf getConfRNormMatrix(Configuration con, Class cla, String input, String output) throws IOException {
+		JobConf conf = new JobConf(con, cla);
 		conf.setJobName("create normalized matrix-row major");
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(Text.class);
@@ -40,14 +34,15 @@ public  class RowNormMatrix  {
 		
 		conf.setMapperClass(UserRowMapper.class);
 		conf.setReducerClass(UserRowReducer.class);
-		
+		conf.setNumMapTasks(150);
+		conf.setNumReduceTasks(150);
 		FileInputFormat.addInputPath(conf, new Path(input));
 		FileOutputFormat.setOutputPath(conf, new Path(output));
 		
 		FileSystem fs = FileSystem.get(conf);
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(output), true);
-
+		fs.delete(new Path(IOInfo.CACHE_COL_MATRIX), true);
 		return conf;
 	}
 	

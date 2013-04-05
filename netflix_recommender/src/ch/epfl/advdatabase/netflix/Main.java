@@ -15,8 +15,10 @@ import org.apache.hadoop.mapred.jobcontrol.JobControl;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix;
 import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeMapper;
 import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeReducer;
+import ch.epfl.advdatabase.netflix.preprocessing.RowNormMatrix;
 import ch.epfl.advdatabase.netflix.preprocessing.RowNormMatrix.UserRowMapper;
 import ch.epfl.advdatabase.netflix.preprocessing.RowNormMatrix.UserRowReducer;
 import ch.epfl.advdatabase.netflix.setting.IOInfo;
@@ -64,63 +66,28 @@ public class Main extends Configured implements Tool{
 
 	@Override
 	public int run(String[] args) throws Exception {
-		// TODO Auto-generated method stub
+		
 		JobControl jc = new JobControl("create normalized matrix");
 		
 		//read input and create normalized matrix-row major
-//		JobConf confRow = RowNormMatrix.getConfRNormMatrix(args[0], IOInfo.CACHE_ROW_MATRIX);
-//		JobClient.runJob(confRow);
-		
-		JobConf conf = new JobConf(getConf(), getClass());//(RowNormMatrix.class);
-		conf.setJobName("create normalized matrix-row major");
-		conf.setMapOutputKeyClass(IntWritable.class);
-		conf.setMapOutputValueClass(Text.class);
-		conf.setOutputKeyClass(IntWritable.class);
-		conf.setOutputValueClass(Text.class);
-		conf.setMapperClass(UserRowMapper.class);
-		conf.setReducerClass(UserRowReducer.class);
-		conf.setNumMapTasks(80);
-		conf.setNumReduceTasks(80);
-		FileInputFormat.addInputPath(conf, new Path(args[0]));
-		FileOutputFormat.setOutputPath(conf, new Path(IOInfo.CACHE_ROW_MATRIX));
-		
-		FileSystem fs = FileSystem.get(conf);
-		// true stands for recursively deleting the folder you gave
-		fs.delete(new Path(IOInfo.CACHE_ROW_MATRIX), true);
-		Job job1 = new Job(conf);
+		JobConf confRow = RowNormMatrix.getConfRNormMatrix(getConf(), getClass(), args[0], IOInfo.CACHE_ROW_MATRIX);
+		Job job1 = new Job(confRow);
 		jc.addJob(job1);
-		//jc.run();
+		
 		//create column major matrix representation
-//		JobConf confCol = ColNormMatrix.getConfTransMatrix(IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_COL_MATRIX);
-//		JobClient.runJob(confCol);
-		JobConf confCol = new JobConf(getConf(), getClass());
-		confCol.setJobName("transpose matrix-row major");
-		confCol.setMapOutputKeyClass(IntWritable.class);
-		confCol.setMapOutputValueClass(Text.class);
-		confCol.setOutputKeyClass(IntWritable.class);
-		confCol.setOutputValueClass(Text.class);
-		//conf.setInputFormat(KeyValueTextInputFormat.class);
-		confCol.setMapperClass(TransposeMapper.class);
-		confCol.setReducerClass(TransposeReducer.class);
-		confCol.setNumMapTasks(80);
-		confCol.setNumReduceTasks(80);
-		//clear previous output
-		FileInputFormat.addInputPath(confCol, new Path(IOInfo.CACHE_ROW_MATRIX));
-		FileOutputFormat.setOutputPath(confCol, new Path(IOInfo.CACHE_COL_MATRIX));
-		
-		//fs = FileSystem.get(confCol);
-		fs.delete(new Path(IOInfo.CACHE_COL_MATRIX), true);
+		JobConf confCol = ColNormMatrix.getConfTransMatrix(getConf(), getClass(), IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_COL_MATRIX);
 		Job job2 = new Job(confCol);
-		
+
 		job2.addDependingJob(job1);
 		jc.addJob(job2);
-		//jc.run();
-		Thread runjobc = new Thread(jc);
-        runjobc.start();
-        while( !jc.allFinished())
-        {
-            //do whatever you want; just wait or ask for job information
-        }
+		jc.run();
+//		Thread runjobc = new Thread(jc);
+//        runjobc.start();
+//        while( !jc.allFinished())
+//        {
+//            System.out.println("jobs left="+jc.getWaitingJobs().size());//do whatever you want; just wait or ask for job information
+//            Thread.sleep(15000);
+//        }
 		//JobClient.runJob(confRow);
 	    return 0;
 	}
