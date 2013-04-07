@@ -1,6 +1,7 @@
 package ch.epfl.advdatabase.netflix.preprocessing;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
+import ch.epfl.advdatabase.netflix.setting.Constants;
 import ch.epfl.advdatabase.netflix.setting.IOInfo;
 
 public  class RowNormMatrix  {
@@ -34,13 +36,16 @@ public  class RowNormMatrix  {
 		
 		conf.setMapperClass(UserRowMapper.class);
 		conf.setReducerClass(UserRowReducer.class);
-		conf.setNumMapTasks(150);
-		conf.setNumReduceTasks(150);
+		conf.setNumMapTasks(Constants.U_FILES);
+		conf.setNumReduceTasks(Constants.U_FILES);
+		
+		conf.set("mapred.textoutputformat.separator",":");
+		
 		FileInputFormat.addInputPath(conf, new Path(input));
 		FileOutputFormat.setOutputPath(conf, new Path(output));
 		
 		FileSystem fs = FileSystem.get(conf);
-		// true stands for recursively deleting the folder you gave
+		//Delete everyoutput, this should be in the driver but let it go.
 		fs.delete(new Path(output), true);
 		fs.delete(new Path(IOInfo.CACHE_COL_MATRIX), true);
 		return conf;
@@ -69,24 +74,21 @@ public  class RowNormMatrix  {
 				  //movie ratings
 				  //each  <userID, MovieId, rating,date> is delimited by a line break
 				  //tokenize the strings on ","
-				  
-				  StringTokenizer itr = new StringTokenizer(line, ",");
+				  String[] tokens = line.split(",");
+				  //StringTokenizer itr = new StringTokenizer(line, ",");
 				  try {
 				      //String name to hold the movieID
-				  String uid = itr.nextToken();
+				  String uid = tokens[0];//itr.nextToken();
 				  //set the movieID as the Key for the output <K V> pair
 				  int uId = Integer.parseInt(uid);
 				  userId.set(uId);
-				  if(uId==3) {
-					  uId+=0;
-				  }
 				  
 				//get the movieId
-				  String mid = itr.nextToken();
+				  String mid = tokens[1];//itr.nextToken();
 				  
 				  String rating;
 				  //get the rating
-				  rating = itr.nextToken();
+				  rating = tokens[2];//itr.nextToken();
 				  //int rat = Integer.parseInt(rating);
 				  //output the <movieID rating,date> to the reducer
 				  
@@ -119,22 +121,23 @@ public  class RowNormMatrix  {
 			// TODO Auto-generated method stub
 			
 		}
-
+		//input=<uid:<movieid:rat>*> output=<uid:movieid1,Normalized_rat1:movieid2,Normalized_rat2:....>
 		@Override
 		public void reduce(IntWritable key, Iterator<Text> values,
 				OutputCollector<IntWritable, Text> output, Reporter reporter)
 				throws IOException {
-			int sumRating = 0;
+			float sumRating = 0;
 			int totRating =0;
-			List<Integer> movieIds = new LinkedList<Integer>();
-			List<Integer> rats = new LinkedList<Integer>();
+			List<Integer> movieIds = new ArrayList<Integer>();
+			List<Integer> rats = new ArrayList<Integer>();
 			while(values.hasNext()) { //"movieId,rat"
 				String line = values.next().toString();
-				StringTokenizer itr = new StringTokenizer(line, ",");
+				String[] tokens = line.split(",");
+				
 				//first is movie id
-				String temp = itr.nextToken();
+				String temp = tokens[0];
 				int mId = Integer.parseInt(temp);
-				int rating = Integer.parseInt(itr.nextToken());
+				int rating = Integer.parseInt( tokens[1]);
 				rats.add(rating);
 				movieIds.add(mId);
 				sumRating += rating;   
@@ -149,7 +152,6 @@ public  class RowNormMatrix  {
 			Text rowValue = new Text(userRow.substring(0, userRow.length()-1));
 			output.collect(key, rowValue);
 		}
-
 	}
 	
 	

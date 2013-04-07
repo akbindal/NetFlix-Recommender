@@ -1,6 +1,7 @@
 package ch.epfl.advdatabase.netflix.preprocessing;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,11 +31,12 @@ public  class ColNormMatrix {
 		conf.setOutputKeyClass(IntWritable.class);
 		conf.setOutputValueClass(Text.class);
 		//conf.setInputFormat(KeyValueTextInputFormat.class);
+		conf.set("mapred.textoutputformat.separator",":");
 		conf.setMapperClass(TransposeMapper.class);
 		conf.setReducerClass(TransposeReducer.class);
 		conf.setNumMapTasks(150);
 		conf.setNumReduceTasks(150);
-		//clear previous output
+
 		FileInputFormat.addInputPath(conf, new Path(input));
 		FileOutputFormat.setOutputPath(conf, new Path(output));
 		
@@ -58,6 +60,11 @@ public  class ColNormMatrix {
 			
 		}
 		IntWritable movieId = new IntWritable();
+		/**file input is of type
+		 * userid\tsum:n:movied,rating:movieid,rating:movie...
+		 * userId\tsum:n:
+		 * 3:1,-0.5:5,0.5
+		 */
 		@Override
 		public void map(LongWritable key, Text value,
 				OutputCollector<IntWritable, Text> output, Reporter reporter)
@@ -67,30 +74,26 @@ public  class ColNormMatrix {
 				  //movie ratings
 				  //each  <userID, MovieId, rating,date> is delimited by a line break
 				  //tokenize the strings on ","
-				  
-				  StringTokenizer itr = new StringTokenizer(line, ",:\t");
+				  String[] tokens = line.split(":");
+				 // StringTokenizer itr = new StringTokenizer(line, ",:\t");
 				  try {
 				      //String name to hold the movieID
-				  String uid = itr.nextToken();
+				  String uid =  tokens[0];//itr.nextToken();
 				  //set the movieID as the Key for the output <K V> pair
 				 // int uId = Integer.parseInt(id);
 				  //userId.set(uId);
 				  
+				  //itr.nextToken();itr.nextToken(); //skip initial two tokens
 				  
 				//get the movieId
-				  while(itr.hasMoreTokens()) {
-					  String mid = itr.nextToken();
-					  int mId = Integer.parseInt(mid);
-					  movieId.set(mId);
-				  //string to hold rating and date for each movie
-					  String rating = "";
-				  //get the rating
-					  rating = itr.nextToken();
-				  //int rat = Integer.parseInt(rating);
-				  //output the <movieID rating,date> to the reducer
-				  
+				  for(int i =1; i<tokens.length; i++) {
+					  String[] ratingPair =  tokens[i].split(",");
+					  int mid = Integer.parseInt(ratingPair[0]);
+					  movieId.set(mid);
+					  String rating = ratingPair[1];
 					  output.collect(movieId, convertToText(uid, rating));
 				  }
+				  
 			  } catch (NumberFormatException e) {
 				  System.out.println("here we are-->\n"+ e.toString());
 				  return;
@@ -106,8 +109,6 @@ public  class ColNormMatrix {
 	}
 	
 	public static class TransposeReducer implements Reducer<IntWritable, Text, IntWritable, Text>  {
-		
-		
 		@Override
 		public void configure(JobConf job) {
 			// TODO Auto-generated method stub
@@ -125,32 +126,29 @@ public  class ColNormMatrix {
 				OutputCollector<IntWritable, Text> output, Reporter reporter)
 				throws IOException {
 			
-			List<Integer> userIds = new LinkedList<Integer>();
-			List<Float> rats = new LinkedList<Float>();
+			//List<String> userIds = new ArrayList<String>();
+			//List<String> rats = new ArrayList<String>();
 			
+			String userRow = "";
 			while(values.hasNext()) {
 				String line = values.next().toString();
-				StringTokenizer itr = new StringTokenizer(line, ",");
+				String[] tokens = line.split(",");//new StringTokenizer(line, ",");
 				//first is movie id
-				String temp = itr.nextToken();
+				
 				try {
-					int uId = Integer.parseInt(temp);
-					float rat = Float.parseFloat(itr.nextToken());
-					rats.add(rat);
-					userIds.add(uId);
+				//	int uId = Integer.parseInt(tokens[0]);
+				//	float rat = Float.parseFloat(tokens[1]);
+				//	rats.add(tokens[1]);
+				//	userIds.add(tokens[0]);
+					userRow+=tokens[0]+","+tokens[1]+":";
 				} catch (NumberFormatException e) {
 					System.out.println("catch"+e.toString());
 				}
 			}
 			
-			String movieRow = "";
-			for(int i=0; i<userIds.size(); i++) {
-				float normRating = rats.get(i);
-				movieRow+=Integer.toString(userIds.get(i))+","+Float.toString(normRating)+":";
-			}
-			if(userIds.size()>0) {
-				Text rowValue = new Text(movieRow.substring(0, movieRow.length()-1));
-				output.collect(key, rowValue);
+			if(userRow.length()> 0) {
+				Text colValue = new Text(userRow);
+				output.collect(key, colValue);
 			}
 		}
 
