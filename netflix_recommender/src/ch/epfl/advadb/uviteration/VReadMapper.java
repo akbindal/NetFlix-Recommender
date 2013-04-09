@@ -1,4 +1,4 @@
-package ch.epfl.advdatabase.netflix.uviteration;
+package ch.epfl.advadb.uviteration;
 
 import java.io.IOException;
 
@@ -10,8 +10,7 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
-public class MreadUmapper implements Mapper<LongWritable, Text, IntWritable, Text>{
-
+public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
 	@Override
 	public void configure(JobConf job) {
 		// TODO Auto-generated method stub
@@ -24,22 +23,28 @@ public class MreadUmapper implements Mapper<LongWritable, Text, IntWritable, Tex
 		
 	}
 	
+	 
 	/*
-	 * 
+	 * (non-Javadoc)
 	 * @see org.apache.hadoop.mapred.Mapper#map(java.lang.Object, java.lang.Object, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
-	 * input-> <uid:movieid1,Normalized_rat1:movieid2,Normalized_rat2:....>
-	 * output-> <uid, <'M':movieId,Norm_rat1:movieId2,Norm_rat2:...>>
+	 * input <vid:vf1,vf2>
+	 * output <vid, <'V':vf1,vf2...>>
 	 */
 	@Override
 	public void map(LongWritable key, Text value,
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
 		String line = value.toString();
-		// it will split into two tokens: userid , <moviedid, rat1:movied2, rat2:...>
-		String[] tokens = line.split(":", 2);
+		String[] tokens = line.split(":",2);
+		//StringTokenizer itr = new StringTokenizer(line, ":");
 		try { 
-			int ui = Integer.parseInt(tokens[0]);
-			output.collect(new IntWritable(ui), new Text("M:"+tokens[1]));
+			String vid = tokens[0];//titr.nextToken();
+			int vi = Integer.parseInt(vid);
+			String vf = "V:"+tokens[1];//itr.nextToken();
+			if(vf.length()<25) {
+				System.out.println("kjlk");
+			}
+			output.collect(new IntWritable(vi), new Text(vf));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

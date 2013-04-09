@@ -1,4 +1,4 @@
-package ch.epfl.advdatabase.netflix.uviteration;
+package ch.epfl.advadb.uviteration;
 
 import java.io.IOException;
 

@@ -1,8 +1,9 @@
-package ch.epfl.advdatabase.netflix.preprocessing;
+package ch.epfl.advadb.initialization;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -18,10 +19,16 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-import ch.epfl.advdatabase.netflix.setting.Constants;
+import ch.epfl.advadb.setting.Constants;
 
-public class VInitialize {
-	public static class VInitiliazeMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
+/**
+ * this class defines the map-reduce innerclasses and jobconfiguration method
+ * which are responsible for intializing the matrix
+ * @author ashish
+ *
+ */
+public class UInitialize {
+	public static class UInitiliazeMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
 
 		@Override
 		public void configure(JobConf job) {
@@ -40,13 +47,13 @@ public class VInitialize {
 				OutputCollector<IntWritable, Text> output, Reporter reporter)
 				throws IOException {
 			
-			for(int i=0; i< Constants.V_FILES; i++) {
+			for(int i=0; i< Constants.U_FILES; i++) {
 				output.collect(new IntWritable(i), new Text());
 			}
 		}
 	}
 	
-	public static class VInitiliazeReducer implements Reducer<IntWritable, Text, IntWritable, Text>  {
+	public static class UInitiliazeReducer implements Reducer<IntWritable, Text, IntWritable, Text>  {
 		@Override
 		public void configure(JobConf job) {
 			// TODO Auto-generated method stub
@@ -65,20 +72,26 @@ public class VInitialize {
 				throws IOException {
 			
 			int k = key.get();
-			int currentMovie = k*Constants.V_SPLIT_SIZE+1;
-			int endFile = (k+1)*Constants.V_SPLIT_SIZE;
-			
+			int currentUser = k*Constants.U_SPLIT_SIZE+1;
+			int endFile = (k+1)*Constants.U_SPLIT_SIZE;
+
 			String value="";
+			Random generator = new Random();
+			double number;
+			int avg=0;
+			double deviation=0.2;
 			for(int i =0 ;i < Constants.D-1; i++) {
-				value+="1,";
+				number = avg+generator.nextDouble() * deviation ;// - deviation/2;
+				value+=Double.toString(number)+",";
 			}
-			value += "1";
+			number = avg+generator.nextDouble()*deviation; // - deviation/2;
+			value += Double.toString(number);
 			
 			outputvalue.set(value);
 			
-			while(currentMovie <= endFile && currentMovie <= Constants.NO_MOVIES) {
-				output.collect(new IntWritable(currentMovie),outputvalue );
-				currentMovie++;
+			while(currentUser <= endFile && currentUser <= Constants.NO_USER) {
+				output.collect(new IntWritable(currentUser),outputvalue );
+				currentUser++;
 			}
 		}
 
@@ -87,15 +100,15 @@ public class VInitialize {
 	
 	public static JobConf getJobConfig(Configuration con, Class cla, String input, String output) throws IOException {
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("V Initialization");
+		conf.setJobName("U Initialization");
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(Text.class);
 		conf.setOutputKeyClass(IntWritable.class);
 		conf.setOutputValueClass(Text.class);
 		//conf.setInputFormat(KeyValueTextInputFormat.class);
-		conf.setMapperClass(VInitiliazeMapper.class);
-		conf.setReducerClass(VInitiliazeReducer.class);
-		conf.setNumReduceTasks(Constants.V_FILES);
+		conf.setMapperClass(UInitiliazeMapper.class);
+		conf.setReducerClass(UInitiliazeReducer.class);
+		conf.setNumReduceTasks(Constants.U_FILES);
 		conf.set("mapred.textoutputformat.separator",":");
 		
 		//create empty file
@@ -103,11 +116,10 @@ public class VInitialize {
 		OutputStream os = fs.create(new Path(input));
 		os.write(1); os.close();
 		fs.delete(new Path(output), true);
-		
+		//fs.rename(arg0, arg1)
 		FileInputFormat.addInputPath(conf, new Path(input));
 		FileOutputFormat.setOutputPath(conf, new Path(output));
 		
 		return conf;
 	}
 }
-

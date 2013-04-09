@@ -1,9 +1,12 @@
-package ch.epfl.advdatabase.netflix.uviteration;
+package ch.epfl.advadb.uviteration;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
@@ -16,7 +19,7 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
-import ch.epfl.advdatabase.netflix.setting.Constants;
+import ch.epfl.advadb.setting.Constants;
 
 /**
  * 
@@ -177,7 +180,12 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 		
 		//for each user feature update
 		String stVFeature = "";
-		for(int i=0; i<Constants.D; i++) {
+		List<Integer> featureIndex = new ArrayList<Integer>(10);
+		for(int i=0; i<Constants.D; i++) featureIndex.add(i);
+		Collections.shuffle(featureIndex);
+		
+		for(int x: featureIndex) {
+			int i = featureIndex.get(x); //for(int i=0; i<Constants.D; i++) {
 			//for each movieId 
 			float innProduct=0;
 			float ujSquare = 0;
@@ -197,6 +205,9 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 					//2. productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 			}
 			vFeature[i]=upFeature;
+			
+		}
+		for(int i=0; i< Constants.D; i++) {
 			stVFeature += Float.toString(vFeature[i]) +",";
 		}
 		stVFeature = stVFeature.substring(0, stVFeature.length()-1);
@@ -206,10 +217,13 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 		float rmse= (float) 0.00;
 		for(int i =0; i< userIds.length; i++) {
 			int uid = userIds[i];
-			rmse+=ratings[i]-productUV[i];
+			rmse+=Math.pow(ratings[i]-productUV[i], 2);
+		}
+		if(userIds.length>0) {
+			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.length));
 		}
 		mos.getCollector("V", reporter).collect(key, new Text(value));
-		mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)));
+		
 	}
 	
 	@Override

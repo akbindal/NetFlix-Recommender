@@ -1,9 +1,12 @@
-package ch.epfl.advdatabase.netflix.uviteration;
+package ch.epfl.advadb.uviteration;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
@@ -15,7 +18,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-import ch.epfl.advdatabase.netflix.setting.Constants;
+import ch.epfl.advadb.setting.Constants;
 
 public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text>  {
 	float[][] vFeature = new float[Constants.NO_MOVIES+1][10];
@@ -145,7 +148,12 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 		
 		//for each user feature update
 		String stUFeature = "";
-		for(int i=0; i<Constants.D; i++) {
+		List<Integer> featureIndex = new ArrayList<Integer>(10);
+		for(int i=0; i<Constants.D; i++) featureIndex.add(i);
+		Collections.shuffle(featureIndex);
+		
+		for(int x: featureIndex) {
+			int i = featureIndex.get(x); //for(int i=0; i<Constants.D; i++) {
 			//for each movieId 
 			float innProduct=0;
 			float viSquare = 0;
@@ -170,6 +178,9 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				System.out.println("kdjl");
 			}
 			uFeature[i]=upFeature;
+			//stUFeature += Float.toString(uFeature[i]) +",";
+		}
+		for(int i=0; i< Constants.D; i++) {
 			stUFeature += Float.toString(uFeature[i]) +",";
 		}
 		stUFeature = stUFeature.substring(0, stUFeature.length()-1);

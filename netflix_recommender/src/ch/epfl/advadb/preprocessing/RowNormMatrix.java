@@ -1,4 +1,4 @@
-package ch.epfl.advdatabase.netflix.preprocessing;
+package ch.epfl.advadb.preprocessing;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,8 +20,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-import ch.epfl.advdatabase.netflix.setting.Constants;
-import ch.epfl.advdatabase.netflix.setting.IOInfo;
+import ch.epfl.advadb.setting.Constants;
+import ch.epfl.advadb.setting.IOInfo;
 
 /*
  * read dataset and create normalized matrix 

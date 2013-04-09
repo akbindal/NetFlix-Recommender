@@ -1,4 +1,4 @@
-package ch.epfl.advdatabase.netflix;
+package ch.epfl.advadb;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,14 +16,14 @@ import org.apache.hadoop.mapred.jobcontrol.JobControl;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix;
-import ch.epfl.advdatabase.netflix.preprocessing.RowNormMatrix;
-import ch.epfl.advdatabase.netflix.preprocessing.UInitialize;
-import ch.epfl.advdatabase.netflix.preprocessing.VInitialize;
-import ch.epfl.advdatabase.netflix.setting.Constants;
-import ch.epfl.advdatabase.netflix.setting.IOInfo;
-import ch.epfl.advdatabase.netflix.uviteration.JobUpdateU;
-import ch.epfl.advdatabase.netflix.uviteration.JobUpdateV;
+import ch.epfl.advadb.initialization.UInitialize;
+import ch.epfl.advadb.initialization.VInitialize;
+import ch.epfl.advadb.preprocessing.ColNormMatrix;
+import ch.epfl.advadb.preprocessing.RowNormMatrix;
+import ch.epfl.advadb.setting.Constants;
+import ch.epfl.advadb.setting.IOInfo;
+import ch.epfl.advadb.uviteration.JobUpdateU;
+import ch.epfl.advadb.uviteration.JobUpdateV;
 
 public class Main extends Configured implements Tool {
 	
@@ -40,7 +40,7 @@ public class Main extends Configured implements Tool {
 					.println("Usage: ch.epfl.advb.Main <input path> <output path>");
 			System.exit(-1);
 		}
-		setup(BIG_DATSET, NO_NODES);
+		setup(BIG_DATSET, NO_NODES, args[1]);
 		int res = ToolRunner.run(new Configuration(), new Main(), args);
 		System.exit(res);
 	}
@@ -55,7 +55,7 @@ public class Main extends Configured implements Tool {
 	 * @param bigDataset: sets up the no of user and movies according to the type of dataset:small, big
 	 * @param no_nodes: no of cluster nodes which are accessible for Reduce
 	 */
-	public static void setup(boolean bigDataset, int no_nodes) {
+	public static void setup(boolean bigDataset, int no_nodes, String output) {
 		if(bigDataset) {
 			Constants.NO_MOVIES=17770;
 			Constants.NO_USER=480189;
@@ -70,6 +70,12 @@ public class Main extends Configured implements Tool {
 		int NO_of_REDUCER = (int) (no_nodes*maxTask*0.95);
 		Constants.V_FILES = NO_of_REDUCER;
 		Constants.U_FILES = NO_of_REDUCER;
+
+		IOInfo.OUTPUT_U_INITIALIZATION = output+"/U_0";
+		IOInfo.OUTPUT_V_INITIALIZATION = output+"/V_0";
+		
+		IOInfo.OUTPUT_V = output+"/V_";
+		IOInfo.OUTPUT_U = output+"/U_";
 	}
 	
 	/*
@@ -132,7 +138,7 @@ public class Main extends Configured implements Tool {
 
 		/*** iterations to update U and V ***/
 		int iter = 1;
-		while (iter < 20) {
+		while (iter < 30) {
 			/*** Update U ***/
 			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
 					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
@@ -172,13 +178,16 @@ public class Main extends Configured implements Tool {
 		try {
 			fileReader = new BufferedReader(new FileReader(path.toString()));
 			String line;
-
+			int sum=0;
 			while ((line = fileReader.readLine()) != null) {
-				String[] tokens = line.split(":", 2);
+				String[] tokens = line.split(":", 3);
 				if (!tokens[1].equals("NaN")) {
 					rmse += Float.parseFloat(tokens[1]);
+					sum+= Integer.parseInt(tokens[2]);
 				}
 			}
+			rmse = rmse/sum;
+			rmse = (float) Math.sqrt(rmse);
 			FileWriter fstream = new FileWriter(path2, true);
 			fstream.write(iter+"\t"+Float.toString(rmse)+"\n");
 			fstream.close();
