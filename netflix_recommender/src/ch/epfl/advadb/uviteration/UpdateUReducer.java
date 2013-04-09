@@ -57,8 +57,8 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				int fi = Integer.parseInt(featureIndex);
 				String featureValue = tokens[3];
 				try{
-				float fv = Float.parseFloat(featureValue);
-				vFeature[movieid][fi-1]=fv;
+					float fv = Float.parseFloat(featureValue);
+					vFeature[movieid][fi-1]=fv;
 				} catch(Exception e) {
 					System.out.println("kljlk");
 				}

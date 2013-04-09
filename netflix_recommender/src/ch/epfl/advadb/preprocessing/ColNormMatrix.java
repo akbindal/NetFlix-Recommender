@@ -168,7 +168,57 @@ public  class ColNormMatrix {
 
 	}
 	
-	public static class TransposeReducer1 implements Reducer<IntWritable, Text, IntWritable, Text>  {
+	public static class TransposeMapper1 implements Mapper<LongWritable, Text, IntWritable, TextPair>{
+
+		@Override
+		public void configure(JobConf job) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void close() throws IOException {
+			// TODO Auto-generated method stub
+			
+		}
+		IntWritable movieId = new IntWritable();
+		
+		/**file input is of type
+		 * userid\tsum:n:movied,rating:movieid,rating:movie...
+		 * userId\tsum:n:
+		 * 3:1,-0.5:5,0.5
+		 */
+		@Override
+		public void map(LongWritable key, Text value,
+				OutputCollector<IntWritable, TextPair> output, Reporter reporter)
+				throws IOException {
+				//convert Text value to string
+			String line = value.toString();
+				  
+				//user id is delimited by ":"
+				//each  <userId:movieId1,rat1:movieId2,rat2:...> 
+			String[] tokens = line.split(":");
+			
+			try {
+				String uid =  tokens[0];//itr.nextToken();
+			    //get the array of movie rating pair
+				for(int i =1; i<tokens.length; i++) {
+					String[] ratingPair =  tokens[i].split(",");
+					int mid = Integer.parseInt(ratingPair[0]);
+					movieId.set(mid);
+					String rating = ratingPair[1];
+					output.collect(movieId, new TextPair(new Text(uid), new Text(rating)));
+				}  
+			  } catch (NumberFormatException e) {
+				 System.out.println("BadRecord\n"+ e.toString());
+				 return;
+			  } catch (IOException e) {
+				  e.printStackTrace();
+			  }
+		}
+	}
+	
+	public static class TransposeReducer1 implements Reducer<IntWritable, TextPair, IntWritable, Text>  {
 		@Override
 		public void configure(JobConf job) {
 		}
@@ -178,19 +228,44 @@ public  class ColNormMatrix {
 		}
 
 		@Override
-		public void reduce(IntWritable key, Iterator<Text> values,
+		public void reduce(IntWritable key, Iterator<TextPair> values,
 				OutputCollector<IntWritable, Text> output, Reporter reporter)
 				throws IOException {
 			//user row : concatenation of all the userid,rat pair with separator":"
 			String userRow = "";
 			while(values.hasNext()) {
-				String line = values.next().toString();
-				String[] tokens = line.split(",");
-				userRow+=tokens[0]+","+tokens[1]+":";
+				TextPair userRatingPair = values.next();
+				userRow+= userRatingPair.getFirst()+","+userRatingPair.getSecond()+":";
 			}
 			Text colValue = new Text(userRow);
 			output.collect(key, colValue);
 		}
 
+	}
+	
+	public static JobConf getJobConfig1(Configuration con, Class cla, String input, String output) throws IOException {
+		
+		JobConf conf = new JobConf(con, cla);
+		conf.setJobName("TP");
+		conf.set("mapred.child.java.opts", "-Xmx400m");
+		conf.setMapOutputKeyClass(IntWritable.class);
+		conf.setMapOutputValueClass(TextPair.class);
+		conf.setOutputKeyClass(IntWritable.class);
+		conf.setOutputValueClass(Text.class);
+		
+		conf.set("mapred.textoutputformat.separator",":");
+		conf.setMapperClass(TransposeMapper1.class);
+		conf.setReducerClass(TransposeReducer1.class);
+		
+		conf.setNumMapTasks(Constants.U_FILES);
+		conf.setNumReduceTasks(Constants.V_FILES);
+
+		FileInputFormat.addInputPath(conf, new Path(input));
+		FileOutputFormat.setOutputPath(conf, new Path(output));
+		
+		FileSystem fs = FileSystem.get(conf);
+		fs.delete(new Path(output), true);
+		
+		return conf;
 	}
 }

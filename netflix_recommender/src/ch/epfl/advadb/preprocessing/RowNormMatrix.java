@@ -56,7 +56,7 @@ public  class RowNormMatrix  {
 		
 		//Delete the output.
 		fs.delete(new Path(output), true);
-		fs.delete(new Path(IOInfo.CACHE_COL_MATRIX), true);
+		//fs.delete(new Path(IOInfo.CACHE_ROW_MATRIX), true);
 		return conf;
 	}
 	

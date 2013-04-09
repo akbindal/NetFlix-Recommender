@@ -19,6 +19,7 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
+import ch.epfl.advadb.Main;
 import ch.epfl.advadb.setting.Constants;
 
 /**
@@ -92,7 +93,7 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 				float fv = Float.parseFloat(featureValue);
 				uFeature[userid][fi-1]=fv;
 				} catch (Exception e) {
-					System.out.println("kljlkj");
+					System.out.println("vreducer");
 				}
 			}
 		} catch (Exception e) {
@@ -120,7 +121,9 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 //		if(key.get()>87) {
 //			System.out.println("dkjalk");
 //		}
-		
+		if(key.get()>100) {
+			System.out.println("we have an error");
+		}
 		String userRatPairs="";
 		String vfeature="";
 		
@@ -210,18 +213,19 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 			vFeature[i]=upFeature;
 		}
 		
+		
 		for(int i=0; i< Constants.D; i++) {			
 			mos.getCollector("V", reporter).collect(new Text("V,"+(i+1)), new Text(key+","+vFeature[i]));
 		}
-		
-		float rmse= (float) 0.00;
-		for(int i =0; i< userIds.length; i++) {
-			int uid = userIds[i];
-			rmse+=Math.pow(ratings[i]-productUV[i], 2);
-		}
-		if(userIds.length>0) {
-			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.length));
-		}
+		//if(Main.CALCULATE_RMSE) {
+//		float rmse= (float) 0.00;
+//		for(int i =0; i< userIds.length; i++) {
+//			int uid = userIds[i];
+//			rmse+=Math.pow(ratings[i]-productUV[i], 2);
+//		}
+//		if(userIds.length>0) {
+//			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.length));
+//		}
 	}
 	
 	@Override

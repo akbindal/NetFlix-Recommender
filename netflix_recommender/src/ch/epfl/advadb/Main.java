@@ -19,6 +19,7 @@ import org.apache.hadoop.util.ToolRunner;
 import ch.epfl.advadb.initialization.UInitialize;
 import ch.epfl.advadb.initialization.VInitialize;
 import ch.epfl.advadb.preprocessing.ColNormMatrix;
+import ch.epfl.advadb.preprocessing.NormColMatrix;
 import ch.epfl.advadb.preprocessing.RowNormMatrix;
 import ch.epfl.advadb.setting.Constants;
 import ch.epfl.advadb.setting.IOInfo;
@@ -29,10 +30,11 @@ public class Main extends Configured implements Tool {
 	
 	public static boolean CALCULATE_RMSE=false;
 	
-	public static boolean BIG_DATSET=true;
+	public static boolean BIG_DATSET=false;
 	
+	public static boolean ITERATION=false;
 	
-	public final static int NO_NODES = 44;
+	public final static int NO_NODES = 88;
 
 	
 	public static void main(String[] args) throws Exception {
@@ -71,8 +73,8 @@ public class Main extends Configured implements Tool {
 		//Constants.U_FILES = 0.95*no_nodes*;
 		//System.out.println("max="+ );
 		int maxTask=2;
-		new JobConf().getInt("mapred.tasktracker.reduce.tasks.maximum", maxTask);
-		int NO_of_REDUCER = (int) (no_nodes*maxTask*0.95);
+		//new JobConf().getInt("mapred.tasktracker.reduce.tasks.maximum", maxTask);
+		int NO_of_REDUCER = no_nodes; //(int) (no_nodes*maxTask*0.95);
 		Constants.V_FILES = NO_of_REDUCER;
 		Constants.U_FILES = NO_of_REDUCER;
 
@@ -98,8 +100,16 @@ public class Main extends Configured implements Tool {
 	 */
 	@Override
 	public int run(String[] args) throws Exception {
-
+		if(!ITERATION) {
 		JobControl jc = new JobControl("Matrix Normalization");
+		
+		/**** Take the traspose of Row Major => Column Major ****/
+		JobConf confCol = NormColMatrix.getJobConfig(getConf(), getClass(),
+				args[0], IOInfo.CACHE_COL_MATRIX);
+		
+		Job job2 = new Job(confCol);
+		//job2.addDependingJob(job1);
+		jc.addJob(job2);
 		
 		/*** read input and create normalized matrix-row major ****/
 		JobConf confRow = RowNormMatrix.getJobConfig(getConf(), getClass(),
@@ -108,15 +118,9 @@ public class Main extends Configured implements Tool {
 		Job job1 = new Job(confRow);
 		jc.addJob(job1);
 
-		/**** Take the traspose of Row Major => Column Major ****/
-		JobConf confCol = ColNormMatrix.getJobConfig(getConf(), getClass(),
-				IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_COL_MATRIX);
-		
-		Job job2 = new Job(confCol);
-		job2.addDependingJob(job1);
-		jc.addJob(job2);
+	
 
-//		/** initialize U and V ***/
+		/** initialize U and V ***/
 //		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
 //				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
 //		Job job3 = new Job(jcInitialU);
@@ -138,39 +142,43 @@ public class Main extends Configured implements Tool {
 												// or ask for job information
 			Thread.sleep(15000);
 		}
+		
+		} else {
 
-		JobControl jbc = new JobControl("uv update");
 
-//		/*** iterations to update U and V ***/
-//		int iter = 1;
-//		while (iter < 30) {
-//			/*** Update U ***/
-//			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
-//					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
-//					IOInfo.OUTPUT_U + iter, IOInfo.OUTPUT_V + (iter - 1));
-//			JobClient.runJob(jcupdateU);
-//
-//			/*** Update V ***/
-//			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
-//					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
-//					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter));
-//			JobClient.runJob(jcupdateV);
-//
-//			/*** 
-//			 * Move the RMSE generated file 
-//			 * from directory:/std57/output/v_iteri to 
-//			 * :"/std57/temp/rmse" otherwise it will read in next Iteration
-//			 ***/
-//			FileSystem fs = FileSystem.get(jcupdateV);
-//			fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), 
-//					new Path("/std57/temp/rmse"));
-//			/** RMSE calculation for small dataset **/
-//			if(CALCULATE_RMSE) {
-//				readRmse(iter, "/std57/temp/rmse", "/std57/rmseresult");
-//			}
-//			iter++;
-//		}
+		/*** iterations to update U and V ***/
+		int iter = 1;
+		while (iter < 30) {
+			/*** Update U ***/
+			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
+					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
+					IOInfo.OUTPUT_U + iter, IOInfo.OUTPUT_V + (iter - 1),
+					iter);
+			JobClient.runJob(jcupdateU);
 
+			/*** Update V ***/
+			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
+					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
+					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter), 
+					iter);
+			JobClient.runJob(jcupdateV);
+
+			/*** 
+			 * Move the RMSE generated file 
+			 * from directory:/std57/output/v_iteri to 
+			 * :"/std57/temp/rmse" otherwise it will read in next Iteration
+			 ***/
+			
+			/** RMSE calculation for small dataset **/
+			if(CALCULATE_RMSE) {
+				FileSystem fs = FileSystem.get(jcupdateV);
+				fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), 
+						new Path("/std57/temp/rmse"));
+				readRmse(iter, "/std57/temp/rmse", "/std57/rmseresult");
+			}
+			iter++;
+		}
+		}
 		return 0;
 	}
 	

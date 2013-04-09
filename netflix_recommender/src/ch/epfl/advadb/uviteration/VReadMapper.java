@@ -40,6 +40,9 @@ public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 		try { 
 			String vid = tokens[2];//titr.nextToken();
 			int vi = Integer.parseInt(vid);
+			if(vi>99) {
+				throw new Exception("value"+vi);
+			}
 			String vf = "V:"+tokens[1]+":"+tokens[3];//itr.nextToken();
 			output.collect(new IntWritable(vi), new Text(vf));
 		} catch (Exception e) {

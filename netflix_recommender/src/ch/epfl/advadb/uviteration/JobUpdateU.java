@@ -17,9 +17,10 @@ import org.apache.hadoop.mapred.lib.MultipleInputs;
 import ch.epfl.advadb.setting.Constants;
 
 public class JobUpdateU {
-	public static JobConf getJobConfig(Configuration con, Class cla, String inUMatrix, String inRowMatrix, String output, String cachePath) throws IOException {
+	public static JobConf getJobConfig(Configuration con, Class cla, String inUMatrix, 
+			String inRowMatrix, String output, String cachePath, int iter) throws IOException {
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("update U");
+		conf.setJobName("update U "+iter);
 		
 		conf.setOutputKeyClass(IntWritable.class);
 		conf.setOutputValueClass(Text.class);
