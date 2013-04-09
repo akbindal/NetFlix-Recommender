@@ -7,7 +7,6 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -18,7 +17,6 @@ import org.apache.hadoop.mapred.lib.MultipleInputs;
 import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
 import ch.epfl.advdatabase.netflix.setting.Constants;
-import ch.epfl.advdatabase.netflix.setting.IOInfo;
 
 public class JobUpdateV {
 	public static JobConf getJobConfig(Configuration con, Class cla, String inColMatrix, String inVMatrix, String output, String cachePath) throws IOException {

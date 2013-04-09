@@ -3,11 +3,7 @@ package ch.epfl.advdatabase.netflix.uviteration;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
@@ -166,9 +162,9 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				//productUV[j] -= uFeature[i]*vFeature[j][i];//old feature contribution subtracted
 				//productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 				productUV[j] = productUV[j] + vFeature[mid][i] *(upFeature-uFeature[i]);
-				if(productUV[j]==Float.NaN ||Float.isInfinite(productUV[j])) {
-					System.out.println("kjdlkjal");
-				}
+//				if(productUV[j]==Float.NaN ||Float.isInfinite(productUV[j])) {
+//					System.out.println("kjdlkjal");
+//				}
 			}
 			if(upFeature==Float.NaN || Float.isInfinite(upFeature)) {
 				System.out.println("kdjl");

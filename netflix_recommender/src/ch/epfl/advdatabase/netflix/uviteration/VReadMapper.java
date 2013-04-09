@@ -1,7 +1,6 @@
 package ch.epfl.advdatabase.netflix.uviteration;
 
 import java.io.IOException;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -42,7 +41,7 @@ public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 			String vid = tokens[0];//titr.nextToken();
 			int vi = Integer.parseInt(vid);
 			String vf = "V:"+tokens[1];//itr.nextToken();
-			if(vi>64) {
+			if(vf.length()<25) {
 				System.out.println("kjlk");
 			}
 			output.collect(new IntWritable(vi), new Text(vf));

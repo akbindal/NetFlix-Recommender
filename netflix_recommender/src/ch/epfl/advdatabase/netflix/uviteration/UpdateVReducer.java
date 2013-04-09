@@ -18,9 +18,39 @@ import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
 import ch.epfl.advdatabase.netflix.setting.Constants;
 
+/**
+ * 
+ * This class represents the reduce phase which is responsible for new feature values of movieIds (V) by
+ * of the reducing phase of V and M join, where V is the feature vector of movie Id
+ * and M is the col-major matrix where Rows=>UserIds and Columns=>MovieIds. It uses distributed cache to load
+ * the U matrix in memory by overriding the Configure function so this class loads the U matrix while setting up
+ * the map task at node and makes it accessible to use. 
+ * 
+ * OUTPUT
+ * 1. This writes out the updated feature values of movieId which is rows of V matrix
+ * 
+ * INPUT
+ * 1. Input of the V is taken from the map phase represented by class:VReadMapper which has 
+ * <key, <value>>: <movieId, <V:i:fv>*> where fv is the value of ith feature for movieId , 10 values for feature
+ * 2. Input of the M is taken from the map phase represented by class:MReadVMapper which has
+ * <key, <value>>: <movieId, <M:userId1,rat1:userId2,rat2:userId3,rat3...>> , 1 user-rating pairs tuple
+ * According to the Project specification, we will have in total 10 feature value
+ * therefore Total values for each key in this reduce phase needs to be exactly 11: 
+ * (10 tuple of feature value) + 1 user-rating Pairs
+ * 
+ * Distributed Cache:
+ * It loads the U matrix by reading the files of U matrix from previous iteration, It uses loadUMatrix function 
+ * to read it.
+ * 
+ * @author ashish
+ *
+ */
 public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text>{
+	
 	float[][] uFeature = new float[Constants.NO_USER+1][10];
+	
 	private MultipleOutputs mos; //rmse
+	
 	@Override
 	public void configure(JobConf job)  {
 		
@@ -82,28 +112,34 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 	public void reduce(IntWritable key, Iterator<Text> values,
 			OutputCollector<IntWritable, Text> output, Reporter reporter) throws IOException {
 		//parse movie ratings and uf
-		if(key.get()>87) {
-			System.out.println("dkjalk");
-		}
+//		if(key.get()>87) {
+//			System.out.println("dkjalk");
+//		}
 		
 		String userRatPairs="";
 		String vfeature="";
-		//we will have only two values
+		
+		//we will have only two values:: either user-rating pair tuples or 
+		//Feature vector tuple for particular movieID
+		
 		while(values.hasNext()) {
 			String line = values.next().toString();
 			String[] tokens = line.split(":", 2);
-			//first is movie id
+			
+			
 			String tupleType = tokens[0];
 			if(tupleType.equals("M")) {
 				userRatPairs = tokens[1];
 			} else if(tupleType.equals("V")){
 				vfeature= tokens[1];
+//				if(vfeature.length()<20) {
+//					System.out.println("kjlk");
+//				}
 			}
 		}
 		
 		//parse movieId from movieRatinPairs
 		String[] tokens = userRatPairs.split(":");
-		//StringTokenizer itr = new StringTokenizer(movieRatPairs,":");
 	
 		userIds = new int[tokens.length];
 		ratings = new float[tokens.length];
@@ -111,39 +147,24 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 		for(int i =0 ; i< tokens.length; i++) {
 			String[] pairs = tokens[i].split(",");
 			try {
-			int uid = Integer.parseInt(pairs[0]);
-			
-			userIds[i]= uid;
-			float rat = Float.parseFloat(pairs[1]);
-			ratings[i] =rat;
+				int uid = Integer.parseInt(pairs[0]);
+				userIds[i]= uid;
+				float rat = Float.parseFloat(pairs[1]);
+				ratings[i] =rat;
 			} catch (Exception e) {
-				// if user doesn't have any movie System.out.println("jkljk");
+				// if user doesn't have any movie 
 			}
 		}
-//		
-//		while(itr.hasMoreTokens()) {
-//			String tempToken[] = itr.nextToken().split(",", 2);
-//			String movieId = tempToken[0];
-//			int mid = Integer.parseInt(movieId);
-//			movieIds.add(mid);
-//			float rat = Float.parseFloat(tempToken[1]);
-//			ratings.add(rat);
-//		}
-//		
-		
-		
-//		//parse userfeature from ufeature
+
 		String[] features = vfeature.split(",");
 		
 		try {
-		for(int i=0; i<Constants.D; i++) {
-			vFeature[i] = Float.parseFloat(features[i]);
-		}
+			for(int i=0; i<Constants.D; i++) {
+				vFeature[i] = Float.parseFloat(features[i]);
+			}
 		} catch (Exception e) {
 			System.out.println("VException=>"+features.toString());
 		}
-		//compute the updated ufeature now
-		//calculate productUV
 		
 		for(int j=0; j< userIds.length; j++) {
 			int uid = userIds[j];
@@ -170,18 +191,17 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 			float upFeature =innProduct/ujSquare;
 			for(int j=0; j< userIds.length; j++) {
 				int uid = userIds[j];
-//				productUV[j] -= uFeature[i]*vFeature[j][i];//old feature contribution subtracted
-	//			productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 				productUV[j] = productUV[j] + uFeature[uid][i] *(upFeature-vFeature[i]);
+				//	It is equivalent to following of two:
+					//1. productUV[j] -= uFeature[i]*vFeature[j][i];//old feature contribution subtracted
+					//2. productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 			}
 			vFeature[i]=upFeature;
 			stVFeature += Float.toString(vFeature[i]) +",";
 		}
 		stVFeature = stVFeature.substring(0, stVFeature.length()-1);
-		//String stUFeature = uFeature.toString();
-		//stUFeature = stUFeature.substring(1, stUFeature.length() - 1).replace(", ", ",");
+		
 		Text value = new Text(stVFeature);
-		//rmseoutput.collect(key, new Text(value));
 		
 		float rmse= (float) 0.00;
 		for(int i =0; i< userIds.length; i++) {

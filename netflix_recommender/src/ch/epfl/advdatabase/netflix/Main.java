@@ -1,8 +1,9 @@
 package ch.epfl.advdatabase.netflix;
 
-
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -19,145 +20,177 @@ import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix;
 import ch.epfl.advdatabase.netflix.preprocessing.RowNormMatrix;
 import ch.epfl.advdatabase.netflix.preprocessing.UInitialize;
 import ch.epfl.advdatabase.netflix.preprocessing.VInitialize;
+import ch.epfl.advdatabase.netflix.setting.Constants;
 import ch.epfl.advdatabase.netflix.setting.IOInfo;
 import ch.epfl.advdatabase.netflix.uviteration.JobUpdateU;
 import ch.epfl.advdatabase.netflix.uviteration.JobUpdateV;
-import ch.epfl.advdatabase.netflix.uviteration.JoinUM;
 
-public class Main extends Configured implements Tool{
+public class Main extends Configured implements Tool {
+	
+	public static boolean CALCULATE_RMSE=true;
+	
+	public static boolean BIG_DATSET=false;
+	
+	public final static int NO_NODES = 88;
+
 	
 	public static void main(String[] args) throws Exception {
 		if (args.length < 0) {
-			System.err.println("Usage: ix.lab01.wikipedia.LastEdit <input path> <output path>");
+			System.err
+					.println("Usage: ch.epfl.advb.Main <input path> <output path>");
 			System.exit(-1);
 		}
+		setup(BIG_DATSET, NO_NODES);
 		int res = ToolRunner.run(new Configuration(), new Main(), args);
 		System.exit(res);
 	}
 
-	@Override
-	public int run(String[] args) throws Exception {
-		
-		JobControl jc = new JobControl("create normalized matrix");
-		
-		/***read input and create normalized matrix-row major****/
-		JobConf confRow = RowNormMatrix.getConfRNormMatrix(getConf(), getClass(), 
-				args[0], IOInfo.CACHE_ROW_MATRIX);
-		Job job1 = new Job(confRow);
-		jc.addJob(job1);
-//		//merge outputfile to somewhere
-//		FileSystem hdfs = FileSystem.get(confRow);
-//		FileUtil.copyMerge(hdfs, new Path(IOInfo.TEMP_USER_OUTPUT), hdfs, new Path(IOInfo.CACHE_ROW_MATRIX)
-//		 						, false, confRow, null);
-		/****create column major matrix representation****/
-		JobConf confCol = ColNormMatrix.getConfTransMatrix(getConf(), getClass(), 
-				IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_COL_MATRIX);
-		Job job2 = new Job(confCol);
-
-		job2.addDependingJob(job1);
-		jc.addJob(job2);
-		
-		/***find normalized rating average, userids and movieIds***/
-//		JobConf jcPreUV = PreUVInitialization.getConfTransMatrix(getConf(), getClass(), IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_PRE_UV);
-//		Job job3 = new Job(jcPreUV);
-//		job3.addDependingJob(job1);
-//		jc.addJob(job3);
-		
-		
-		/**initialize uv***/
-		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(), 
-				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
-		Job job4 = new Job(jcInitialU);
-		jc.addJob(job4);
-		
-		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(), 
-				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
-		Job job5 = new Job(jcInitialV);
-		jc.addJob(job5);
-		
-		//jc.run();
-		Thread runjobc = new Thread(jc);
-        runjobc.start();
-        while( !jc.allFinished())
-        {
-            System.out.println("jobs left="+(jc.getWaitingJobs().size()+jc.getRunningJobs().size()));//do whatever you want; just wait or ask for job information
-            Thread.sleep(5000);
-        }
-        JobControl jbc = new JobControl("uv update");
-        /**join of um**/
-//        JobConf jcJoinU = JoinUM.getJobConfig(getConf(), getClass(), IOInfo.TEMP_JOIN_UM);
-//        Job job7 = new Job(jcJoinU);
-//        jbc.addJob(job7);
-		/***iteration of uv***/
-        int iter=1;
-        while(iter<20) {
-			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(), 
-					IOInfo.OUTPUT_U+(iter-1), IOInfo.CACHE_ROW_MATRIX, 
-					IOInfo.OUTPUT_U+iter, IOInfo.OUTPUT_V+(iter-1));
-			JobClient.runJob(jcupdateU);
-			//Job job6 = new Job(jcupdateU);
-			//jbc.addJob(job6);
-	//		job6.addDependingJob(job4);
-	//		job6.addDependingJob(job1);
-	//		job6.addDependingJob(job5);
-	//		runjobc = new Thread(jbc);
-	//		runjobc.start();
-	//		while( !jbc.allFinished())
-	//        {
-	//            System.out.println("jobs left="+(jbc.getWaitingJobs().size()+jbc.getRunningJobs().size()));//do whatever you want; just wait or ask for job information
-	//            Thread.sleep(2000);
-	//        }
-			//calcualteRmse();
-			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(), 
-					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V+(iter-1), 
-					IOInfo.OUTPUT_V+iter, IOInfo.OUTPUT_U+(iter));
-			//Job job7 = new Job(jcupdateV);
-			JobClient.runJob(jcupdateV);
-			FileSystem fs = FileSystem.get(jcupdateV);
-			fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), new Path("/std57/rmse"));
-			//JobConf jcrmse = RMSE.getJobConfi(getConf(), getClass());
-			float rmse = readRmse("/std57/rmse");
-			System.out.println(iter+":"+rmse);
-			iter++;
-        }	
-			//job7.addDependingJob(job6);
-		//jbc.addJob(job7);
-		//jbc.run();
-//		int iter=0;
-//		while(true) {
-//			//row range and column range
-//			
-//		}
-		
-		
-		//JobClient.runJob(confRow);
-	    return 0;
+	/**
+	 * This is responsible to setup the constants (netflix.settings.constants) which are responsible 
+	 * for setting up the no of mappers and no of reducers.
+	 * No of mappers depends on no of input files therefore U and V are splitted in a way such that
+	 * no of files are generated according to no of mappers.
+	 * see constant U_SPLIT_SIZE
+	 * which are used by 
+	 * @param bigDataset: sets up the no of user and movies according to the type of dataset:small, big
+	 * @param no_nodes: no of cluster nodes which are accessible for Reduce
+	 */
+	public static void setup(boolean bigDataset, int no_nodes) {
+		if(bigDataset) {
+			Constants.NO_MOVIES=17770;
+			Constants.NO_USER=480189;
+		} else {
+			Constants.NO_MOVIES=99;
+			Constants.NO_USER=5000;
+		}
+		//Constants.U_FILES = 0.95*no_nodes*;
+		//System.out.println("max="+ );
+		int maxTask=2;
+		new JobConf().getInt("mapred.tasktracker.reduce.tasks.maximum", maxTask);
+		int NO_of_REDUCER = (int) (no_nodes*maxTask*0.95);
+		Constants.V_FILES = NO_of_REDUCER;
+		Constants.U_FILES = NO_of_REDUCER;
 	}
 	
-	public float readRmse(String path) {
-		BufferedReader fileReader=null;
-		float rmse=0;
+	/*
+	 * All the job sequences for the UV decomposition algorithm
+	 * is written. 
+	 * In order to run the jobs, This function use two methods which are defined in mapred api
+	 * 1. JobClient runs the single job.
+	 * 2. JobControl best to run the sequence of dependent jobs in easier way, but this is bit 
+	 * slower than JobClient for running sequential job (slower in terms of setting up the jobs)
+	 * 
+	 * Therefore for the preprocessing, initialization, JobControl is used
+	 * but for iteration, Jobs are executed through JobClient. 
+	 * 
+	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
+	 */
+	@Override
+	public int run(String[] args) throws Exception {
+
+		JobControl jc = new JobControl("Matrix Normalization");
+		
+		/*** read input and create normalized matrix-row major ****/
+		JobConf confRow = RowNormMatrix.getJobConfig(getConf(), getClass(),
+				args[0], IOInfo.CACHE_ROW_MATRIX);
+		
+		Job job1 = new Job(confRow);
+		jc.addJob(job1);
+
+		/**** Take the traspose of Row Major => Column Major ****/
+		JobConf confCol = ColNormMatrix.getJobConfig(getConf(), getClass(),
+				IOInfo.CACHE_ROW_MATRIX, IOInfo.CACHE_COL_MATRIX);
+		
+		Job job2 = new Job(confCol);
+		job2.addDependingJob(job1);
+		jc.addJob(job2);
+
+		/** initialize U and V ***/
+		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
+				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
+		Job job3 = new Job(jcInitialU);
+		jc.addJob(job3);
+
+		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(),
+				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
+		Job job4 = new Job(jcInitialV);
+		jc.addJob(job4);
+
+		/** start the Job Execution **/
+		Thread runjobc = new Thread(jc);
+		runjobc.start();
+		while (!jc.allFinished()) {
+			System.out
+					.println("jobs left="
+							+ (jc.getWaitingJobs().size() + jc.getRunningJobs()
+									.size()));// do whatever you want; just wait
+												// or ask for job information
+			Thread.sleep(15000);
+		}
+
+		JobControl jbc = new JobControl("uv update");
+
+		/*** iterations to update U and V ***/
+		int iter = 1;
+		while (iter < 20) {
+			/*** Update U ***/
+			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
+					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
+					IOInfo.OUTPUT_U + iter, IOInfo.OUTPUT_V + (iter - 1));
+			JobClient.runJob(jcupdateU);
+
+			/*** Update V ***/
+			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
+					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
+					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter));
+			JobClient.runJob(jcupdateV);
+
+			/*** 
+			 * Move the RMSE generated file 
+			 * from directory:/std57/output/v_iteri to 
+			 * :"/std57/temp/rmse" otherwise it will read in next Iteration
+			 ***/
+			FileSystem fs = FileSystem.get(jcupdateV);
+			fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), 
+					new Path("/std57/temp/rmse"));
+			/** RMSE calculation for small dataset **/
+			if(CALCULATE_RMSE) {
+				readRmse(iter, "/std57/temp/rmse", "/std57/rmseresult");
+			}
+			iter++;
+		}
+
+		return 0;
+	}
+	
+	/*
+	 * It read the RMSE from the file and sums up the total Rmse value
+	 */
+	public void readRmse(int iter, String path, String path2) {
+		BufferedReader fileReader = null;
+		float rmse = 0;
 		try {
-			fileReader= new BufferedReader(
-			        new FileReader(path.toString()));
+			fileReader = new BufferedReader(new FileReader(path.toString()));
 			String line;
 
 			while ((line = fileReader.readLine()) != null) {
 				String[] tokens = line.split(":", 2);
-				if(!tokens[1].equals("NaN")) {
+				if (!tokens[1].equals("NaN")) {
 					rmse += Float.parseFloat(tokens[1]);
 				}
 			}
+			FileWriter fstream = new FileWriter(path2, true);
+			fstream.write(iter+"\t"+Float.toString(rmse)+"\n");
+			fstream.close();
 		} catch (Exception e) {
 			e.printStackTrace();
-		}finally {
-		      try {
+		} finally {
+			try {
 				fileReader.close();
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	    }
-		return rmse;
+		}
 	}
+	
 }

@@ -3,9 +3,6 @@ package ch.epfl.advdatabase.netflix.preprocessing;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -21,10 +18,14 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
-import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeMapper;
-import ch.epfl.advdatabase.netflix.preprocessing.ColNormMatrix.TransposeReducer;
 import ch.epfl.advdatabase.netflix.setting.Constants;
 
+/**
+ * this class defines the map-reduce innerclasses and jobconfiguration method
+ * which are responsible for intializing the matrix
+ * @author ashish
+ *
+ */
 public class UInitialize {
 	public static class UInitiliazeMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
 

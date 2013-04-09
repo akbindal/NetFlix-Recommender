@@ -1,6 +1,5 @@
 package ch.epfl.advdatabase.netflix.uviteration;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -16,7 +15,6 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.lib.MultipleInputs;
 
 import ch.epfl.advdatabase.netflix.setting.Constants;
-import ch.epfl.advdatabase.netflix.setting.IOInfo;
 
 public class JobUpdateU {
 	public static JobConf getJobConfig(Configuration con, Class cla, String inUMatrix, String inRowMatrix, String output, String cachePath) throws IOException {
