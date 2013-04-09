@@ -20,7 +20,7 @@ import org.apache.hadoop.mapred.Reporter;
 
 import ch.epfl.advadb.setting.Constants;
 
-public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text>  {
+public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritable, Text, Text, Text>  {
 	float[][] vFeature = new float[Constants.NO_MOVIES+1][10];
 	
 	@Override
@@ -43,6 +43,7 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 	    
 	}
 	
+	//<V,fi,movieid,value>
 	public void loadVMatrix(Path  path){
 		BufferedReader fileReader=null;
 		try {
@@ -50,15 +51,18 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 			        new FileReader(path.toString()));
 			String line;
 			while ((line = fileReader.readLine()) != null) {
-				String[] tokens = line.split(":", 2);
-				int movieid = Integer.parseInt(tokens[0]);
-				String[] features = tokens[1].split(",");
-				int i=0;
-				for(String fi: features) {
-					float fet = Float.parseFloat(fi);
-					vFeature[movieid][i]=fet;
-					i++;
+				String[] tokens = line.split(",");
+				int movieid = Integer.parseInt(tokens[2]);
+				String featureIndex = tokens[1]; // = tokens[1].split(",");
+				int fi = Integer.parseInt(featureIndex);
+				String featureValue = tokens[3];
+				try{
+				float fv = Float.parseFloat(featureValue);
+				vFeature[movieid][fi-1]=fv;
+				} catch(Exception e) {
+					System.out.println("kljlk");
 				}
+				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -76,11 +80,11 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 	float[] ratings ;
 	float[] productUV ;
 	
-	float[] uFeature = new float[10];
+	float[] uFeature = new float[10]; //0th index is not used
 	
 	@Override
 	public void reduce(IntWritable key, Iterator<Text> values,
-			OutputCollector<IntWritable, Text> output, Reporter reporter) throws IOException {
+			OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
 		//parse movie ratings and uf
 		String movieRatPairs="";
 		String ufeature="";
@@ -93,7 +97,8 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 			if(tupleType.equals("M")) {
 				movieRatPairs = tokens[1];
 			} else if(tupleType.equals("U")){
-				ufeature= tokens[1];
+				String[] pair = tokens[1].split(":");
+				uFeature[Integer.parseInt(pair[0])-1]= Float.parseFloat(pair[1]);
 			}
 		}
 		
@@ -127,13 +132,6 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 //		}
 //		
 		
-		
-//		//parse userfeature from ufeature
-		String[] features = ufeature.split(",");
-		for(int i=0; i<Constants.D; i++) {
-			uFeature[i] = Float.parseFloat(features[i]);
-		}
-		
 		//compute the updated ufeature now
 		//calculate productUV
 		
@@ -147,7 +145,7 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 		}
 		
 		//for each user feature update
-		String stUFeature = "";
+		
 		List<Integer> featureIndex = new ArrayList<Integer>(10);
 		for(int i=0; i<Constants.D; i++) featureIndex.add(i);
 		Collections.shuffle(featureIndex);
@@ -178,15 +176,10 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				System.out.println("kdjl");
 			}
 			uFeature[i]=upFeature;
-			//stUFeature += Float.toString(uFeature[i]) +",";
 		}
+		Text outputkey = new Text("U,"+key);
 		for(int i=0; i< Constants.D; i++) {
-			stUFeature += Float.toString(uFeature[i]) +",";
+			output.collect(outputkey, new Text((i+1)+","+uFeature[i]));
 		}
-		stUFeature = stUFeature.substring(0, stUFeature.length()-1);
-		//String stUFeature = uFeature.toString();
-		//stUFeature = stUFeature.substring(1, stUFeature.length() - 1).replace(", ", ",");
-		Text value = new Text(stUFeature);
-		output.collect(key, new Text(value));
 	}
 }

@@ -53,7 +53,7 @@ public class UInitialize {
 		}
 	}
 	
-	public static class UInitiliazeReducer implements Reducer<IntWritable, Text, IntWritable, Text>  {
+	public static class UInitiliazeReducer implements Reducer<IntWritable, Text, Text, Text>  {
 		@Override
 		public void configure(JobConf job) {
 			// TODO Auto-generated method stub
@@ -68,7 +68,7 @@ public class UInitialize {
 		Text outputvalue = new Text();
 		@Override
 		public void reduce(IntWritable key, Iterator<Text> values,
-				OutputCollector<IntWritable, Text> output, Reporter reporter)
+				OutputCollector<Text, Text> output, Reporter reporter)
 				throws IOException {
 			
 			int k = key.get();
@@ -80,17 +80,15 @@ public class UInitialize {
 			double number;
 			int avg=0;
 			double deviation=0.2;
-			for(int i =0 ;i < Constants.D-1; i++) {
-				number = avg+generator.nextDouble() * deviation ;// - deviation/2;
-				value+=Double.toString(number)+",";
-			}
-			number = avg+generator.nextDouble()*deviation; // - deviation/2;
-			value += Double.toString(number);
-			
-			outputvalue.set(value);
-			
+			Text outputKey;
 			while(currentUser <= endFile && currentUser <= Constants.NO_USER) {
-				output.collect(new IntWritable(currentUser),outputvalue );
+				outputKey = new Text("U,"+currentUser);
+				for(int i =1 ;i <= Constants.D; i++) {
+					number = avg+generator.nextDouble() * deviation ;// - deviation/2;
+					value=i+","+Double.toString(number);
+					outputvalue.set(value);
+					output.collect(outputKey, outputvalue );
+				}
 				currentUser++;
 			}
 		}
@@ -109,7 +107,7 @@ public class UInitialize {
 		conf.setMapperClass(UInitiliazeMapper.class);
 		conf.setReducerClass(UInitiliazeReducer.class);
 		conf.setNumReduceTasks(Constants.U_FILES);
-		conf.set("mapred.textoutputformat.separator",":");
+		conf.set("mapred.textoutputformat.separator",",");
 		
 		//create empty file
 		FileSystem fs = FileSystem.get(conf);

@@ -160,18 +160,36 @@ public  class ColNormMatrix {
 			while(values.hasNext()) {
 				String line = values.next().toString();
 				String[] tokens = line.split(",");
-				
-				try {
-					userRow+=tokens[0]+","+tokens[1]+":";
-				} catch (NumberFormatException e) {
-					System.out.println("catch"+e.toString());
-				}
+				userRow+=tokens[0]+","+tokens[1]+":";
 			}
-			
-			if(userRow.length()> 0) {
-				Text colValue = new Text(userRow);
-				output.collect(key, colValue);
+			Text colValue = new Text(userRow);
+			output.collect(key, colValue);
+		}
+
+	}
+	
+	public static class TransposeReducer1 implements Reducer<IntWritable, Text, IntWritable, Text>  {
+		@Override
+		public void configure(JobConf job) {
+		}
+
+		@Override
+		public void close() throws IOException {
+		}
+
+		@Override
+		public void reduce(IntWritable key, Iterator<Text> values,
+				OutputCollector<IntWritable, Text> output, Reporter reporter)
+				throws IOException {
+			//user row : concatenation of all the userid,rat pair with separator":"
+			String userRow = "";
+			while(values.hasNext()) {
+				String line = values.next().toString();
+				String[] tokens = line.split(",");
+				userRow+=tokens[0]+","+tokens[1]+":";
 			}
+			Text colValue = new Text(userRow);
+			output.collect(key, colValue);
 		}
 
 	}

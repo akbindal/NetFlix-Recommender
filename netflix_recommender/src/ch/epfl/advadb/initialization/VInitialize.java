@@ -47,7 +47,7 @@ public class VInitialize {
 		}
 	}
 	
-	public static class VInitiliazeReducer implements Reducer<IntWritable, Text, IntWritable, Text>  {
+	public static class VInitiliazeReducer implements Reducer<IntWritable, Text, Text, Text>  {
 		@Override
 		public void configure(JobConf job) {
 			// TODO Auto-generated method stub
@@ -62,29 +62,31 @@ public class VInitialize {
 		Text outputvalue = new Text();
 		@Override
 		public void reduce(IntWritable key, Iterator<Text> values,
-				OutputCollector<IntWritable, Text> output, Reporter reporter)
+				OutputCollector<Text, Text> output, Reporter reporter)
 				throws IOException {
 			
 			int k = key.get();
 			int currentMovie = k*Constants.V_SPLIT_SIZE+1;
 			int endFile = (k+1)*Constants.V_SPLIT_SIZE;
 			
+			
 			String value="";
+
 			Random generator = new Random();
 			double number;
 			int avg=0;
 			double deviation=0.2;
-			for(int i =0 ;i < Constants.D-1; i++) {
-				number = avg+generator.nextDouble() *deviation;// - deviation/2;
-				value+=Double.toString(number)+",";
-			}
-			number = avg+generator.nextDouble()*deviation;// - deviation/2;
-			value += Double.toString(number);
 			
-			outputvalue.set(value);
-			
+			Text outputKey;
 			while(currentMovie <= endFile && currentMovie <= Constants.NO_MOVIES) {
-				output.collect(new IntWritable(currentMovie),outputvalue );
+				
+				for(int i =1 ;i <= Constants.D; i++) {
+					outputKey = new Text("V,"+i);
+					number = avg+generator.nextDouble() *deviation - deviation/2;
+					value=currentMovie+","+Double.toString(number);
+					outputvalue.set(value);
+					output.collect(outputKey,outputvalue );
+				}
 				currentMovie++;
 			}
 		}
@@ -103,7 +105,7 @@ public class VInitialize {
 		conf.setMapperClass(VInitiliazeMapper.class);
 		conf.setReducerClass(VInitiliazeReducer.class);
 		conf.setNumReduceTasks(Constants.V_FILES);
-		conf.set("mapred.textoutputformat.separator",":");
+		conf.set("mapred.textoutputformat.separator",",");
 		
 		//create empty file
 		FileSystem fs = FileSystem.get(conf);

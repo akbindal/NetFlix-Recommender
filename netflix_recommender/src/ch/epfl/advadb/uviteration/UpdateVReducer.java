@@ -83,14 +83,16 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 			        new FileReader(path.toString()));
 			String line;
 			while ((line = fileReader.readLine()) != null) {
-				String[] tokens = line.split(":", 2);
-				int userid = Integer.parseInt(tokens[0]);
-				String[] features = tokens[1].split(",");
-				int i=0;
-				for(String fi: features) {
-					float fet = Float.parseFloat(fi);
-					uFeature[userid][i]=fet;
-					i++;
+				String[] tokens = line.split(",");
+				int userid = Integer.parseInt(tokens[1]);
+				String featureIndex = tokens[2]; // = tokens[1].split(",");
+				try{
+				int fi = Integer.parseInt(featureIndex);
+				String featureValue = tokens[3];
+				float fv = Float.parseFloat(featureValue);
+				uFeature[userid][fi-1]=fv;
+				} catch (Exception e) {
+					System.out.println("kljlkj");
 				}
 			}
 		} catch (Exception e) {
@@ -109,7 +111,7 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 	float[] ratings ;
 	float[] productUV ;
 	
-	float[] vFeature = new float[10];
+	float[] vFeature = new float[10]; //0 won't be used
 	
 	@Override
 	public void reduce(IntWritable key, Iterator<Text> values,
@@ -134,7 +136,8 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 			if(tupleType.equals("M")) {
 				userRatPairs = tokens[1];
 			} else if(tupleType.equals("V")){
-				vfeature= tokens[1];
+				String[] pair = tokens[1].split(":");
+				vFeature [Integer.parseInt(pair[0])-1]=  Float.parseFloat(pair[1]);//tokens[1];
 //				if(vfeature.length()<20) {
 //					System.out.println("kjlk");
 //				}
@@ -161,13 +164,13 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 
 		String[] features = vfeature.split(",");
 		
-		try {
-			for(int i=0; i<Constants.D; i++) {
-				vFeature[i] = Float.parseFloat(features[i]);
-			}
-		} catch (Exception e) {
-			System.out.println("VException=>"+features.toString());
-		}
+//		try {
+//			for(int i=0; i<Constants.D; i++) {
+//				vFeature[i] = Float.parseFloat(features[i]);
+//			}
+//		} catch (Exception e) {
+//			System.out.println("VException=>"+features.toString());
+//		}
 		
 		for(int j=0; j< userIds.length; j++) {
 			int uid = userIds[j];
@@ -205,14 +208,11 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 					//2. productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 			}
 			vFeature[i]=upFeature;
-			
 		}
-		for(int i=0; i< Constants.D; i++) {
-			stVFeature += Float.toString(vFeature[i]) +",";
-		}
-		stVFeature = stVFeature.substring(0, stVFeature.length()-1);
 		
-		Text value = new Text(stVFeature);
+		for(int i=0; i< Constants.D; i++) {			
+			mos.getCollector("V", reporter).collect(new Text("V,"+(i+1)), new Text(key+","+vFeature[i]));
+		}
 		
 		float rmse= (float) 0.00;
 		for(int i =0; i< userIds.length; i++) {
@@ -222,8 +222,6 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 		if(userIds.length>0) {
 			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.length));
 		}
-		mos.getCollector("V", reporter).collect(key, new Text(value));
-		
 	}
 	
 	@Override

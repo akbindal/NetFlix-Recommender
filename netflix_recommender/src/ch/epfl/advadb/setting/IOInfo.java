@@ -8,15 +8,13 @@
 package ch.epfl.advadb.setting;
 
 public final class IOInfo {
-	public final static String TEMP_MOVIE_OUTPUT="/std57/temp/movie/output";
+	
 	public final static String TEMP_MOVIE_MERGE="/std57/temp/movie/merge";
-	public final static String TEMP_USER_OUTPUT="/std57/temp/user/output";
+	
 	public final static String TEMP_USER_MERGE="/std57/temp/user/merge";
-	public final static String MATRIX_OUTPUT="/std57/temp/matrix/outptu";
 	public final static String MATRIX_MERGE="/std57/temp/matrix/merge";
-	public final static String CACHE_ROW_MATRIX="/std57/cache/matrix/row";
-	public final static String CACHE_COL_MATRIX="/std57/cache/matrix/col";
-	public static final String CACHE_PRE_UV = "/std57/cache/preuv";
+	public static String CACHE_ROW_MATRIX;
+	public static String CACHE_COL_MATRIX;
 	public static  String OUTPUT_U_INITIALIZATION;
 	public static String OUTPUT_V_INITIALIZATION;
 	public static String TRASH = "/std57/trash/dump.txt";

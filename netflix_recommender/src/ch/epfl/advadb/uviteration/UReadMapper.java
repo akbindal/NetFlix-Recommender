@@ -25,23 +25,23 @@ public class UReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 	}
 	
 	 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * 
 	 * @see org.apache.hadoop.mapred.Mapper#map(java.lang.Object, java.lang.Object, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
-	 * input <uid:uf1,uf2>
-	 * output <uid, <'U':uf1,uf2...>>
+	 * input <U,uid,fi,value>
+	 * output <uid, <U:fi,value>*>
 	 */
 	@Override
 	public void map(LongWritable key, Text value,
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
 		String line = value.toString();
-		String[] tokens = line.split(":");
+		String[] tokens = line.split(",");
 		//StringTokenizer itr = new StringTokenizer(line, ":");
 		try { 
-			String uid = tokens[0];
+			String uid = tokens[1];
 			int ui = Integer.parseInt(uid);
-			String uf = "U:"+tokens[1];
+			String uf = "U:"+tokens[2]+":"+tokens[3];
 			output.collect(new IntWritable(ui), new Text(uf));
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -27,11 +27,12 @@ import ch.epfl.advadb.uviteration.JobUpdateV;
 
 public class Main extends Configured implements Tool {
 	
-	public static boolean CALCULATE_RMSE=true;
+	public static boolean CALCULATE_RMSE=false;
 	
-	public static boolean BIG_DATSET=false;
+	public static boolean BIG_DATSET=true;
 	
-	public final static int NO_NODES = 88;
+	
+	public final static int NO_NODES = 44;
 
 	
 	public static void main(String[] args) throws Exception {
@@ -59,9 +60,13 @@ public class Main extends Configured implements Tool {
 		if(bigDataset) {
 			Constants.NO_MOVIES=17770;
 			Constants.NO_USER=480189;
+			IOInfo.CACHE_ROW_MATRIX="/std57/bigcache/matrix/row";
+			IOInfo.CACHE_COL_MATRIX="/std57/bigcache/matrix/col";
 		} else {
 			Constants.NO_MOVIES=99;
 			Constants.NO_USER=5000;
+			IOInfo.CACHE_ROW_MATRIX="/std57/smallcache/matrix/row";
+			IOInfo.CACHE_COL_MATRIX="/std57/smallcache/matrix/col";
 		}
 		//Constants.U_FILES = 0.95*no_nodes*;
 		//System.out.println("max="+ );
@@ -111,16 +116,16 @@ public class Main extends Configured implements Tool {
 		job2.addDependingJob(job1);
 		jc.addJob(job2);
 
-		/** initialize U and V ***/
-		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
-				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
-		Job job3 = new Job(jcInitialU);
-		jc.addJob(job3);
-
-		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(),
-				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
-		Job job4 = new Job(jcInitialV);
-		jc.addJob(job4);
+//		/** initialize U and V ***/
+//		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
+//				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
+//		Job job3 = new Job(jcInitialU);
+//		jc.addJob(job3);
+//
+//		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(),
+//				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
+//		Job job4 = new Job(jcInitialV);
+//		jc.addJob(job4);
 
 		/** start the Job Execution **/
 		Thread runjobc = new Thread(jc);
@@ -136,35 +141,35 @@ public class Main extends Configured implements Tool {
 
 		JobControl jbc = new JobControl("uv update");
 
-		/*** iterations to update U and V ***/
-		int iter = 1;
-		while (iter < 30) {
-			/*** Update U ***/
-			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
-					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
-					IOInfo.OUTPUT_U + iter, IOInfo.OUTPUT_V + (iter - 1));
-			JobClient.runJob(jcupdateU);
-
-			/*** Update V ***/
-			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
-					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
-					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter));
-			JobClient.runJob(jcupdateV);
-
-			/*** 
-			 * Move the RMSE generated file 
-			 * from directory:/std57/output/v_iteri to 
-			 * :"/std57/temp/rmse" otherwise it will read in next Iteration
-			 ***/
-			FileSystem fs = FileSystem.get(jcupdateV);
-			fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), 
-					new Path("/std57/temp/rmse"));
-			/** RMSE calculation for small dataset **/
-			if(CALCULATE_RMSE) {
-				readRmse(iter, "/std57/temp/rmse", "/std57/rmseresult");
-			}
-			iter++;
-		}
+//		/*** iterations to update U and V ***/
+//		int iter = 1;
+//		while (iter < 30) {
+//			/*** Update U ***/
+//			JobConf jcupdateU = JobUpdateU.getJobConfig(getConf(), getClass(),
+//					IOInfo.OUTPUT_U + (iter - 1), IOInfo.CACHE_ROW_MATRIX,
+//					IOInfo.OUTPUT_U + iter, IOInfo.OUTPUT_V + (iter - 1));
+//			JobClient.runJob(jcupdateU);
+//
+//			/*** Update V ***/
+//			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
+//					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
+//					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter));
+//			JobClient.runJob(jcupdateV);
+//
+//			/*** 
+//			 * Move the RMSE generated file 
+//			 * from directory:/std57/output/v_iteri to 
+//			 * :"/std57/temp/rmse" otherwise it will read in next Iteration
+//			 ***/
+//			FileSystem fs = FileSystem.get(jcupdateV);
+//			fs.rename(new Path(IOInfo.OUTPUT_V+iter+"/rmse-r-00000"), 
+//					new Path("/std57/temp/rmse"));
+//			/** RMSE calculation for small dataset **/
+//			if(CALCULATE_RMSE) {
+//				readRmse(iter, "/std57/temp/rmse", "/std57/rmseresult");
+//			}
+//			iter++;
+//		}
 
 		return 0;
 	}
@@ -180,10 +185,11 @@ public class Main extends Configured implements Tool {
 			String line;
 			int sum=0;
 			while ((line = fileReader.readLine()) != null) {
-				String[] tokens = line.split(":", 3);
-				if (!tokens[1].equals("NaN")) {
-					rmse += Float.parseFloat(tokens[1]);
-					sum+= Integer.parseInt(tokens[2]);
+				String[] xyz = line.split(",", 2);
+				if (!xyz[0].equals("NaN")) {
+					String[] tokens = xyz[1].split(":");
+					rmse += Float.parseFloat(tokens[0]);
+					sum+= Integer.parseInt(tokens[1]);
 				}
 			}
 			rmse = rmse/sum;
