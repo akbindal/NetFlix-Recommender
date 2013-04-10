@@ -24,7 +24,7 @@ public class JobUpdateV {
 			String output, String cachePath, int iter) throws IOException {
 		
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("jcl update v "+iter);
+		conf.setJobName("jco update v "+iter);
 		
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(TupleTriplet.class);

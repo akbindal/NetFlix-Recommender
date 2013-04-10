@@ -21,7 +21,7 @@ public class JobUpdateU {
 	public static JobConf getJobConfig(Configuration con, Class cla, String inUMatrix, 
 			String inRowMatrix, String output, String cachePath, int iter) throws IOException {
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("jcl update U "+iter);
+		conf.setJobName("jco update U "+iter);
 		
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(TupleTriplet.class);

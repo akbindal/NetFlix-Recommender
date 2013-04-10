@@ -43,9 +43,7 @@ public class MreadVmapper implements Mapper<LongWritable, Text, IntWritable, Tup
 			String[] pair = tokens[1].split(",");
 			int mi = Integer.parseInt(pair[0]);
 			float rat = Float.parseFloat(pair[1]);
-			if(mi > 99) {
-				System.out.println("adada");
-			}
+			
 			output.collect(new IntWritable(mi), new TupleTriplet('M', ui, rat)); 
 		} catch (Exception e) {
 			e.printStackTrace();

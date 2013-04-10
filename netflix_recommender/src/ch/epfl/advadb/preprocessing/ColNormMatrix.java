@@ -37,7 +37,7 @@ import ch.epfl.advadb.setting.Constants;
 public  class ColNormMatrix {
 	
 	/**
-	 * 
+	 * not used ::This class is too slower on cluster .. dropped 
 	 * @param con: Configuration instance from class which is implementing ToolRunner
 	 * @param cla: Class instance of class which is implementing ToolRunner
 	 * @param input: to set the Input path for the the Map task <userId:movieId1,rat1:movieId2,rat2:...>

@@ -57,13 +57,9 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				String featureIndex = tokens[1]; // = tokens[1].split(",");
 				int fi = Integer.parseInt(featureIndex);
 				String featureValue = tokens[3];
-				try{
-					float fv = Float.parseFloat(featureValue);
-					vFeature[movieid][fi-1]=fv;
-				} catch(Exception e) {
-					System.out.println("kljlk");
-				}
 				
+				float fv = Float.parseFloat(featureValue);
+				vFeature[movieid][fi-1]=fv;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -147,12 +143,6 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 				//productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
 				productUV.set(j, productUV.get(j) + 
 						vFeature[mid][i] *(upFeature-uFeature[i])  );
-//				if(productUV[j]==Float.NaN ||Float.isInfinite(productUV[j])) {
-//					System.out.println("kjdlkjal");
-//				}
-			}
-			if(upFeature==Float.NaN || Float.isInfinite(upFeature)) {
-				System.out.println("kdjl");
 			}
 			uFeature[i]=upFeature;
 		}

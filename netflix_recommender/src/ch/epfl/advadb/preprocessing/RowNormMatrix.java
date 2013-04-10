@@ -106,9 +106,7 @@ public  class RowNormMatrix  {
 				   	//get the rating
 				String rating = tokens[2];
 				float rat = Float.parseFloat(rating);
-				if(mId>99) {
-					System.out.println("ljlk");
-				}
+				
 				output.collect(userId, new IntFloatPair(mId, rat));
 				
 			  } catch (NumberFormatException e) {

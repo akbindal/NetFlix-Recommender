@@ -32,7 +32,7 @@ public class Main extends Configured implements Tool {
 	
 	public static boolean BIG_DATSET=true;
 	
-	public static boolean ITERATION=false;
+	public static boolean ITERATION=false; //keep it like this only
 	
 	public final static int NO_NODES = 88;
 
@@ -70,11 +70,10 @@ public class Main extends Configured implements Tool {
 			IOInfo.CACHE_ROW_MATRIX="/std57/smallcache/matrix/row";
 			IOInfo.CACHE_COL_MATRIX="/std57/smallcache/matrix/col";
 		}
-		//Constants.U_FILES = 0.95*no_nodes*;
-		//System.out.println("max="+ );
+		
 		int maxTask=2;
 		//new JobConf().getInt("mapred.tasktracker.reduce.tasks.maximum", maxTask);
-		int NO_of_REDUCER = no_nodes; //(int) (no_nodes*maxTask*0.95);
+		int NO_of_REDUCER = no_nodes; //(int) (no_nodes*maxTask*0.95); // prof changed the criteria
 		Constants.V_FILES = NO_of_REDUCER;
 		Constants.U_FILES = NO_of_REDUCER;
 		
@@ -104,14 +103,7 @@ public class Main extends Configured implements Tool {
 	public int run(String[] args) throws Exception {
 		if(!ITERATION) {
 		JobControl jc = new JobControl("Matrix Normalization");
-		
-		/**** Take the traspose of Row Major => Column Major ****/
-//		JobConf confCol = NormColMatrix.getJobConfig(getConf(), getClass(),
-//				args[0], IOInfo.CACHE_COL_MATRIX);
-//		
-//		Job job2 = new Job(confCol);
-//		//job2.addDependingJob(job1);
-//		jc.addJob(job2);
+
 		
 		/*** read input and create normalized matrix-row major ****/
 		JobConf confRow = RowNormMatrix.getJobConfig(getConf(), getClass(),

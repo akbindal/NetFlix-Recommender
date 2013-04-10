@@ -59,6 +59,7 @@ public class VInitialize {
 			// TODO Auto-generated method stub
 			
 		}
+		
 		Text outputvalue = new Text();
 		@Override
 		public void reduce(IntWritable key, Iterator<Text> values,

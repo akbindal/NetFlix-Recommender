@@ -88,14 +88,12 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 				String[] tokens = line.split(",");
 				int userid = Integer.parseInt(tokens[1]);
 				String featureIndex = tokens[2]; // = tokens[1].split(",");
-				try{
+				
 				int fi = Integer.parseInt(featureIndex);
 				String featureValue = tokens[3];
 				float fv = Float.parseFloat(featureValue);
 				uFeature[userid][fi-1]=fv;
-				} catch (Exception e) {
-					System.out.println("vreducer");
-				}
+				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -118,13 +116,6 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 	@Override
 	public void reduce(IntWritable key, Iterator<TupleTriplet> values,
 			OutputCollector<IntWritable, Text> output, Reporter reporter) throws IOException {
-		//parse movie ratings and uf
-//		if(key.get()>87) {
-//			System.out.println("dkjalk");
-//		}
-//		if(key.get()>100) {
-//			System.out.println("we have an error");
-//		}
 		
 		userIds = new ArrayList<Integer>();
 		ratings = new ArrayList<Float>();
