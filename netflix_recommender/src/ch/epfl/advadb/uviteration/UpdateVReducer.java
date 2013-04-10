@@ -20,6 +20,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
 import ch.epfl.advadb.Main;
+import ch.epfl.advadb.IO.TupleTriplet;
 import ch.epfl.advadb.setting.Constants;
 
 /**
@@ -49,7 +50,7 @@ import ch.epfl.advadb.setting.Constants;
  * @author ashish
  *
  */
-public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text>{
+public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable, TupleTriplet, IntWritable, Text>{
 	
 	float[][] uFeature = new float[Constants.NO_USER+1][10];
 	
@@ -108,80 +109,55 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 	    }
 	}
 	 
-	int[] userIds ;
-	float[] ratings ;
-	float[] productUV ;
+	List<Integer> userIds ;
+	List<Float> ratings ;
+	List<Float> productUV ;
 	
 	float[] vFeature = new float[10]; //0 won't be used
 	
 	@Override
-	public void reduce(IntWritable key, Iterator<Text> values,
+	public void reduce(IntWritable key, Iterator<TupleTriplet> values,
 			OutputCollector<IntWritable, Text> output, Reporter reporter) throws IOException {
 		//parse movie ratings and uf
 //		if(key.get()>87) {
 //			System.out.println("dkjalk");
 //		}
-		if(key.get()>100) {
-			System.out.println("we have an error");
-		}
-		String userRatPairs="";
-		String vfeature="";
+//		if(key.get()>100) {
+//			System.out.println("we have an error");
+//		}
 		
-		//we will have only two values:: either user-rating pair tuples or 
+		userIds = new ArrayList<Integer>();
+		ratings = new ArrayList<Float>();
+		productUV = new ArrayList<Float>();
+		
+		//we will have only two type of values:: either user-rating pair tuples or 
 		//Feature vector tuple for particular movieID
 		
 		while(values.hasNext()) {
-			String line = values.next().toString();
-			String[] tokens = line.split(":", 2);
-			
-			
-			String tupleType = tokens[0];
-			if(tupleType.equals("M")) {
-				userRatPairs = tokens[1];
-			} else if(tupleType.equals("V")){
-				String[] pair = tokens[1].split(":");
-				vFeature [Integer.parseInt(pair[0])-1]=  Float.parseFloat(pair[1]);//tokens[1];
-//				if(vfeature.length()<20) {
-//					System.out.println("kjlk");
-//				}
-			}
-		}
-		
-		//parse movieId from movieRatinPairs
-		String[] tokens = userRatPairs.split(":");
-	
-		userIds = new int[tokens.length];
-		ratings = new float[tokens.length];
-		productUV = new float[tokens.length];;
-		for(int i =0 ; i< tokens.length; i++) {
-			String[] pairs = tokens[i].split(",");
-			try {
-				int uid = Integer.parseInt(pairs[0]);
-				userIds[i]= uid;
-				float rat = Float.parseFloat(pairs[1]);
-				ratings[i] =rat;
-			} catch (Exception e) {
-				// if user doesn't have any movie 
-			}
-		}
+			TupleTriplet triple = values.next();
+			char type = triple.getFirst();
 
-		String[] features = vfeature.split(",");
+			switch(type){
+			    case 'M':
+			        userIds.add(triple.getSecond());
+			        ratings.add(triple.getThird());
+			        productUV.add(0f);
+			        break;
+			    case 'V':
+			    	vFeature[triple.getSecond()-1] = triple.getThird();
+			        break;
+			}
+		}
 		
-//		try {
-//			for(int i=0; i<Constants.D; i++) {
-//				vFeature[i] = Float.parseFloat(features[i]);
-//			}
-//		} catch (Exception e) {
-//			System.out.println("VException=>"+features.toString());
-//		}
+		//productUV = new ArrayList<Float>(userIds.size());
 		
-		for(int j=0; j< userIds.length; j++) {
-			int uid = userIds[j];
+		for(int j=0; j< userIds.size(); j++) {
+			int uid = userIds.get(j);
 			float sum =0;
 			for(int i=0; i<Constants.D; i++) {
 				sum+=vFeature[i]*uFeature[uid][i];
 			}
-			productUV[j]=sum;
+			productUV.set(j, sum);
 		}
 		
 		//for each user feature update
@@ -195,17 +171,18 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 			//for each movieId 
 			float innProduct=0;
 			float ujSquare = 0;
-			for(int j=0; j<userIds.length; j++) {
-				int uid = userIds[j];
-				float subtract = ratings[j]-productUV[j]
+			for(int j=0; j<userIds.size(); j++) {
+				int uid = userIds.get(j);
+				float subtract = ratings.get(j) - productUV.get(j)
 						+ vFeature[i]*uFeature[uid][i];
 				innProduct += subtract*uFeature[uid][i];
 				ujSquare += uFeature[uid][i]*uFeature[uid][i];
 			}
 			float upFeature =innProduct/ujSquare;
-			for(int j=0; j< userIds.length; j++) {
-				int uid = userIds[j];
-				productUV[j] = productUV[j] + uFeature[uid][i] *(upFeature-vFeature[i]);
+			for(int j=0; j< userIds.size(); j++) {
+				int uid = userIds.get(j);
+				productUV.set(j, productUV.get(j) + 
+						uFeature[uid][i] *(upFeature-vFeature[i]));
 				//	It is equivalent to following of two:
 					//1. productUV[j] -= uFeature[i]*vFeature[j][i];//old feature contribution subtracted
 					//2. productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
@@ -217,15 +194,17 @@ public class UpdateVReducer extends MapReduceBase implements Reducer<IntWritable
 		for(int i=0; i< Constants.D; i++) {			
 			mos.getCollector("V", reporter).collect(new Text("V,"+(i+1)), new Text(key+","+vFeature[i]));
 		}
-		//if(Main.CALCULATE_RMSE) {
-//		float rmse= (float) 0.00;
-//		for(int i =0; i< userIds.length; i++) {
-//			int uid = userIds[i];
-//			rmse+=Math.pow(ratings[i]-productUV[i], 2);
-//		}
-//		if(userIds.length>0) {
-//			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.length));
-//		}
+		if(Main.CALCULATE_RMSE) {
+		float rmse= (float) 0.00;
+		for(int i =0; i< userIds.size(); i++) {
+			int uid = userIds.get(i);
+			rmse+=Math.pow(ratings.get(i)-
+					productUV.get(i), 2);
+		}
+		if(userIds.size()>0) {
+			mos.getCollector("rmse", reporter).collect(key, new Text(Float.toString(rmse)+":"+userIds.size()));
+		}
+		}
 	}
 	
 	@Override

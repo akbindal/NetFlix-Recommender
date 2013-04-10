@@ -16,6 +16,7 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.MultipleInputs;
 import org.apache.hadoop.mapred.lib.MultipleOutputs;
 
+import ch.epfl.advadb.IO.TupleTriplet;
 import ch.epfl.advadb.setting.Constants;
 
 public class JobUpdateV {
@@ -23,8 +24,10 @@ public class JobUpdateV {
 			String output, String cachePath, int iter) throws IOException {
 		
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("update v "+iter);
+		conf.setJobName("jcl update v "+iter);
 		
+		conf.setMapOutputKeyClass(IntWritable.class);
+		conf.setMapOutputValueClass(TupleTriplet.class);
 		conf.setOutputKeyClass(IntWritable.class);
 		conf.setOutputValueClass(Text.class);
 		//conf.setInputFormat(KeyValueTextInputFormat.class);

@@ -10,7 +10,9 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
-public class UReadMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
+import ch.epfl.advadb.IO.TupleTriplet;
+
+public class UReadMapper implements Mapper<LongWritable, Text, IntWritable, TupleTriplet>{
 
 	@Override
 	public void configure(JobConf job) {
@@ -33,7 +35,7 @@ public class UReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 	 */
 	@Override
 	public void map(LongWritable key, Text value,
-			OutputCollector<IntWritable, Text> output, Reporter reporter)
+			OutputCollector<IntWritable, TupleTriplet> output, Reporter reporter)
 			throws IOException {
 		String line = value.toString();
 		String[] tokens = line.split(",");
@@ -41,8 +43,10 @@ public class UReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 		try { 
 			String uid = tokens[1];
 			int ui = Integer.parseInt(uid);
-			String uf = "U:"+tokens[2]+":"+tokens[3];
-			output.collect(new IntWritable(ui), new Text(uf));
+			int fi = Integer.parseInt(tokens[2]);
+			float fv = Float.parseFloat(tokens[3]);
+			
+			output.collect(new IntWritable(ui), new TupleTriplet('U', fi, fv));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

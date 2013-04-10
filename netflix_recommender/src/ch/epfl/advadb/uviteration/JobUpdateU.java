@@ -14,14 +14,17 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.lib.MultipleInputs;
 
+import ch.epfl.advadb.IO.TupleTriplet;
 import ch.epfl.advadb.setting.Constants;
 
 public class JobUpdateU {
 	public static JobConf getJobConfig(Configuration con, Class cla, String inUMatrix, 
 			String inRowMatrix, String output, String cachePath, int iter) throws IOException {
 		JobConf conf = new JobConf(con, cla);
-		conf.setJobName("update U "+iter);
+		conf.setJobName("jcl update U "+iter);
 		
+		conf.setMapOutputKeyClass(IntWritable.class);
+		conf.setMapOutputValueClass(TupleTriplet.class);
 		conf.setOutputKeyClass(IntWritable.class);
 		conf.setOutputValueClass(Text.class);
 		//conf.setInputFormat(KeyValueTextInputFormat.class);

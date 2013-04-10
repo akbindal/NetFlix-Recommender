@@ -2,8 +2,8 @@ package ch.epfl.advadb.setting;
 
 public class Constants {
 	public final static int D = 10;
-	public static int NO_USER = 5000; //480189;
-	public static int NO_MOVIES = 99;//17770;
+	public static int NO_USER = 480189;
+	public static int NO_MOVIES = 17770;
 	public static int U_FILES = 88;
 	public static int V_FILES = 88;
 	/**

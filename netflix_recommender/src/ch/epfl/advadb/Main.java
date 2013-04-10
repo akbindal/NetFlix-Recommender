@@ -30,7 +30,7 @@ public class Main extends Configured implements Tool {
 	
 	public static boolean CALCULATE_RMSE=false;
 	
-	public static boolean BIG_DATSET=false;
+	public static boolean BIG_DATSET=true;
 	
 	public static boolean ITERATION=false;
 	
@@ -66,7 +66,7 @@ public class Main extends Configured implements Tool {
 			IOInfo.CACHE_COL_MATRIX="/std57/bigcache/matrix/col";
 		} else {
 			Constants.NO_MOVIES=99;
-			Constants.NO_USER=5000;
+			Constants.NO_USER=7000; //5000;
 			IOInfo.CACHE_ROW_MATRIX="/std57/smallcache/matrix/row";
 			IOInfo.CACHE_COL_MATRIX="/std57/smallcache/matrix/col";
 		}
@@ -77,7 +77,9 @@ public class Main extends Configured implements Tool {
 		int NO_of_REDUCER = no_nodes; //(int) (no_nodes*maxTask*0.95);
 		Constants.V_FILES = NO_of_REDUCER;
 		Constants.U_FILES = NO_of_REDUCER;
-
+		
+		Constants.U_SPLIT_SIZE = (int) Math.round(((double)Constants.NO_USER)/Constants.U_FILES+0.5);
+		Constants.V_SPLIT_SIZE = (int) Math.round(((double)Constants.NO_MOVIES)/Constants.V_FILES+0.5);;
 		IOInfo.OUTPUT_U_INITIALIZATION = output+"/U_0";
 		IOInfo.OUTPUT_V_INITIALIZATION = output+"/V_0";
 		
@@ -104,12 +106,12 @@ public class Main extends Configured implements Tool {
 		JobControl jc = new JobControl("Matrix Normalization");
 		
 		/**** Take the traspose of Row Major => Column Major ****/
-		JobConf confCol = NormColMatrix.getJobConfig(getConf(), getClass(),
-				args[0], IOInfo.CACHE_COL_MATRIX);
-		
-		Job job2 = new Job(confCol);
-		//job2.addDependingJob(job1);
-		jc.addJob(job2);
+//		JobConf confCol = NormColMatrix.getJobConfig(getConf(), getClass(),
+//				args[0], IOInfo.CACHE_COL_MATRIX);
+//		
+//		Job job2 = new Job(confCol);
+//		//job2.addDependingJob(job1);
+//		jc.addJob(job2);
 		
 		/*** read input and create normalized matrix-row major ****/
 		JobConf confRow = RowNormMatrix.getJobConfig(getConf(), getClass(),
@@ -121,29 +123,29 @@ public class Main extends Configured implements Tool {
 	
 
 		/** initialize U and V ***/
-//		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
-//				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
-//		Job job3 = new Job(jcInitialU);
-//		jc.addJob(job3);
-//
-//		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(),
-//				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
-//		Job job4 = new Job(jcInitialV);
-//		jc.addJob(job4);
+		JobConf jcInitialU = UInitialize.getJobConfig(getConf(), getClass(),
+				IOInfo.TRASH, IOInfo.OUTPUT_U_INITIALIZATION);
+		Job job3 = new Job(jcInitialU);
+		jc.addJob(job3);
+
+		JobConf jcInitialV = VInitialize.getJobConfig(getConf(), getClass(),
+				IOInfo.TRASH, IOInfo.OUTPUT_V_INITIALIZATION);
+		Job job4 = new Job(jcInitialV);
+		jc.addJob(job4);
 
 		/** start the Job Execution **/
 		Thread runjobc = new Thread(jc);
 		runjobc.start();
 		while (!jc.allFinished()) {
-			System.out
+		/*	System.out
 					.println("jobs left="
 							+ (jc.getWaitingJobs().size() + jc.getRunningJobs()
 									.size()));// do whatever you want; just wait
-												// or ask for job information
-			Thread.sleep(15000);
+		*/										// or ask for job information
+			Thread.sleep(2000);
 		}
 		
-		} else {
+	//	} else {
 
 
 		/*** iterations to update U and V ***/
@@ -158,7 +160,7 @@ public class Main extends Configured implements Tool {
 
 			/*** Update V ***/
 			JobConf jcupdateV = JobUpdateV.getJobConfig(getConf(), getClass(),
-					IOInfo.CACHE_COL_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
+					IOInfo.CACHE_ROW_MATRIX, IOInfo.OUTPUT_V + (iter - 1),
 					IOInfo.OUTPUT_V + iter, IOInfo.OUTPUT_U + (iter), 
 					iter);
 			JobClient.runJob(jcupdateV);

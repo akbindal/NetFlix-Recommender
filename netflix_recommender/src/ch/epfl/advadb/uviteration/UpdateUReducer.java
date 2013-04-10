@@ -18,9 +18,10 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
+import ch.epfl.advadb.IO.TupleTriplet;
 import ch.epfl.advadb.setting.Constants;
 
-public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritable, Text, Text, Text>  {
+public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritable, TupleTriplet, Text, Text>  {
 	float[][] vFeature = new float[Constants.NO_MOVIES+1][10];
 	
 	@Override
@@ -76,72 +77,49 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 	    }
 	}
 	 
-	int[] movieIds ;
-	float[] ratings ;
-	float[] productUV ;
+	List<Integer> movieIds ;
+	List<Float> ratings ;
+	List<Float> productUV ;
 	
 	float[] uFeature = new float[10]; //0th index is not used
 	
 	@Override
-	public void reduce(IntWritable key, Iterator<Text> values,
+	public void reduce(IntWritable key, Iterator<TupleTriplet> values,
 			OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
 		//parse movie ratings and uf
-		String movieRatPairs="";
-		String ufeature="";
-		//we will have only two values
+		
+		movieIds = new ArrayList<Integer>();
+		ratings = new ArrayList<Float>();
+		productUV = new ArrayList<Float>();
+		
 		while(values.hasNext()) {
-			String line = values.next().toString();
-			String[] tokens = line.split(":", 2);
-			//first is movie id
-			String tupleType = tokens[0];
-			if(tupleType.equals("M")) {
-				movieRatPairs = tokens[1];
-			} else if(tupleType.equals("U")){
-				String[] pair = tokens[1].split(":");
-				uFeature[Integer.parseInt(pair[0])-1]= Float.parseFloat(pair[1]);
+			TupleTriplet triple = values.next();
+			char type = triple.getFirst();
+
+			switch(type){
+			    case 'M':
+			        movieIds.add(triple.getSecond());
+			        ratings.add(triple.getThird());
+			        productUV.add(0f);
+			        break;
+			    case 'U':
+			        uFeature[triple.getSecond()-1] = triple.getThird();
+			        break;
 			}
 		}
 		
-		//parse movieId from movieRatinPairs
-		String[] tokens = movieRatPairs.split(":");
-		//StringTokenizer itr = new StringTokenizer(movieRatPairs,":");
-	
-		movieIds = new int[tokens.length];
-		ratings = new float[tokens.length];
-		productUV = new float[tokens.length];;
-		for(int i =0 ; i< tokens.length; i++) {
-			String[] pairs = tokens[i].split(",");
-			try {
-			int mid = Integer.parseInt(pairs[0]);
-			
-			movieIds[i]= mid;
-			float rat = Float.parseFloat(pairs[1]);
-			ratings[i] =rat;
-			} catch (Exception e) {
-				// if user doesn't have any movie System.out.println("jkljk");
-			}
-		}
-//		
-//		while(itr.hasMoreTokens()) {
-//			String tempToken[] = itr.nextToken().split(",", 2);
-//			String movieId = tempToken[0];
-//			int mid = Integer.parseInt(movieId);
-//			movieIds.add(mid);
-//			float rat = Float.parseFloat(tempToken[1]);
-//			ratings.add(rat);
-//		}
-//		
+		//
 		
 		//compute the updated ufeature now
 		//calculate productUV
 		
-		for(int j=0; j< movieIds.length; j++) {
-			int mid = movieIds[j];
+		for(int j=0; j< movieIds.size(); j++) {
+			int mid = movieIds.get(j);
 			float sum =0;
 			for(int i=0; i<Constants.D; i++) {
 				sum+=uFeature[i]*vFeature[mid][i];
 			}
-			productUV[j]=sum;
+			productUV.set(j, sum);
 		}
 		
 		//for each user feature update
@@ -155,19 +133,20 @@ public class UpdateUReducer  extends MapReduceBase implements Reducer<IntWritabl
 			//for each movieId 
 			float innProduct=0;
 			float viSquare = 0;
-			for(int j=0; j<movieIds.length; j++) {
-				int mid = movieIds[j];
-				float subtract = ratings[j]-productUV[j]
+			for(int j=0; j<movieIds.size(); j++) {
+				int mid = movieIds.get(j);
+				float subtract = ratings.get(j)-productUV.get(j)
 						+ uFeature[i]*vFeature[mid][i];
 				innProduct += subtract*vFeature[mid][i];
 				viSquare += vFeature[mid][i]*vFeature[mid][i];
 			}
 			float upFeature =innProduct/viSquare;
-			for(int j=0; j< movieIds.length; j++) {
-				int mid = movieIds[j];
+			for(int j=0; j< movieIds.size(); j++) {
+				int mid = movieIds.get(j);
 				//productUV[j] -= uFeature[i]*vFeature[j][i];//old feature contribution subtracted
 				//productUV[j]  += upFeature*vFeature[j][i];//updated feature contribution added
-				productUV[j] = productUV[j] + vFeature[mid][i] *(upFeature-uFeature[i]);
+				productUV.set(j, productUV.get(j) + 
+						vFeature[mid][i] *(upFeature-uFeature[i])  );
 //				if(productUV[j]==Float.NaN ||Float.isInfinite(productUV[j])) {
 //					System.out.println("kjdlkjal");
 //				}

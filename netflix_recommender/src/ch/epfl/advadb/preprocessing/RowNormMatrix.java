@@ -20,6 +20,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
+import ch.epfl.advadb.IO.IntFloatPair;
 import ch.epfl.advadb.setting.Constants;
 import ch.epfl.advadb.setting.IOInfo;
 
@@ -38,9 +39,9 @@ public  class RowNormMatrix  {
 		JobConf conf = new JobConf(con, cla);
 		conf.setJobName("create normalized matrix-row major");
 		conf.setMapOutputKeyClass(IntWritable.class);
-		conf.setMapOutputValueClass(Text.class);
+		conf.setMapOutputValueClass(IntFloatPair.class);
 		conf.setOutputKeyClass(IntWritable.class);
-		conf.setOutputValueClass(Text.class);
+		conf.setOutputValueClass(IntFloatPair.class);
 		
 		conf.setMapperClass(UserRowMapper.class);
 		conf.setReducerClass(UserRowReducer.class);
@@ -63,7 +64,7 @@ public  class RowNormMatrix  {
 	/*
 	 * 
 	 */
-	public static class UserRowMapper extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, Text>{
+	public static class UserRowMapper extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, IntFloatPair>{
 
 		@Override
 		public void configure(JobConf job) {
@@ -85,7 +86,7 @@ public  class RowNormMatrix  {
 		 */
 		@Override
 		public void map(LongWritable key, Text value,
-				OutputCollector<IntWritable, Text> output, Reporter reporter)
+				OutputCollector<IntWritable, IntFloatPair> output, Reporter reporter)
 				throws IOException {
 			
 				//convert Text value to string
@@ -101,11 +102,14 @@ public  class RowNormMatrix  {
 				  
 					//get the movieId
 				String mid = tokens[1];
-				  
+				int mId = Integer.parseInt(mid);
 				   	//get the rating
 				String rating = tokens[2];
-				
-				output.collect(userId, convertToText(mid,rating));
+				float rat = Float.parseFloat(rating);
+				if(mId>99) {
+					System.out.println("ljlk");
+				}
+				output.collect(userId, new IntFloatPair(mId, rat));
 				
 			  } catch (NumberFormatException e) {
 				  System.out.println("BadRecord\n"+ e.toString());
@@ -114,11 +118,6 @@ public  class RowNormMatrix  {
 				  e.printStackTrace();
 			  }
 		}
-		
-		Text convertToText(String movieId, String rat) {
-			Text ret = new Text(movieId+","+rat);
-			return ret;
-		}
 	}
 	
 	/*
@@ -126,7 +125,7 @@ public  class RowNormMatrix  {
 	 * output<userId:movieId1,Norm_rating1:movieId2,Norm_rating2:movieId3,Norm_rating3:...>
 	 * (* :: list)
 	 */
-	public static class UserRowReducer extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text>  {
+	public static class UserRowReducer extends MapReduceBase implements Reducer<IntWritable, IntFloatPair, IntWritable, IntFloatPair>  {
 		
 		@Override
 		public void configure(JobConf job) {
@@ -139,24 +138,21 @@ public  class RowNormMatrix  {
 		}
 		
 		@Override
-		public void reduce(IntWritable key, Iterator<Text> values,
-				OutputCollector<IntWritable, Text> output, Reporter reporter)
+		public void reduce(IntWritable key, Iterator<IntFloatPair> values,
+				OutputCollector<IntWritable, IntFloatPair> output, Reporter reporter)
 				throws IOException {
 			float sumRating = 0;
 			int totRating =0;
 			List<Integer> movieIds = new ArrayList<Integer>();
-			List<Integer> rats = new ArrayList<Integer>();
+			List<Float> rats = new ArrayList<Float>();
 			while(values.hasNext()) { 
-				String line = values.next().toString();
-				String[] movieRatPair = line.split(",");
-				
+				IntFloatPair p = values.next();
 				//first is movie id
-				int mId = Integer.parseInt(movieRatPair[0]);
-				int rating = Integer.parseInt( movieRatPair[1]);
-				movieIds.add(mId);
-				rats.add(rating);
 				
-				sumRating += rating;   
+				movieIds.add(p.getFirst());
+				rats.add(p.getSecond());
+				
+				sumRating += p.getSecond();   
 				totRating++;
 			}
 			
@@ -165,13 +161,8 @@ public  class RowNormMatrix  {
 			String userRow = "";
 			for(int i=0;i<movieIds.size();i++) {
 				float normRating = rats.get(i)-avg;
-				userRow+=Integer.toString(movieIds.get(i))+","+Float.toString(normRating)+":";
+				output.collect(key, new IntFloatPair(movieIds.get(i), normRating));
 			}
-			Text rowValue = new Text(userRow.substring(0, userRow.length()-1));
-
-			output.collect(key, rowValue);
 		}
 	}
-	
-	
 }

@@ -10,7 +10,9 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
-public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text>{
+import ch.epfl.advadb.IO.TupleTriplet;
+
+public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, TupleTriplet>{
 	@Override
 	public void configure(JobConf job) {
 		// TODO Auto-generated method stub
@@ -32,7 +34,7 @@ public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 	 */
 	@Override
 	public void map(LongWritable key, Text value,
-			OutputCollector<IntWritable, Text> output, Reporter reporter)
+			OutputCollector<IntWritable, TupleTriplet> output, Reporter reporter)
 			throws IOException {
 		String line = value.toString();
 		String[] tokens = line.split(",");
@@ -40,11 +42,9 @@ public class VReadMapper implements Mapper<LongWritable, Text, IntWritable, Text
 		try { 
 			String vid = tokens[2];//titr.nextToken();
 			int vi = Integer.parseInt(vid);
-			if(vi>99) {
-				throw new Exception("value"+vi);
-			}
-			String vf = "V:"+tokens[1]+":"+tokens[3];//itr.nextToken();
-			output.collect(new IntWritable(vi), new Text(vf));
+			int fi = Integer.parseInt(tokens[1]);
+			float fv = Float.parseFloat(tokens[3]);
+			output.collect(new IntWritable(vi), new TupleTriplet('V', fi, fv));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

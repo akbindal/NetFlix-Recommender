@@ -42,7 +42,7 @@ public class VInitialize {
 				throws IOException {
 			
 			for(int i=0; i< Constants.V_FILES; i++) {
-				output.collect(new IntWritable(i), new Text());
+				output.collect(new IntWritable(i), new Text(""));
 			}
 		}
 	}
