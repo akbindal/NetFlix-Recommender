@@ -57,6 +57,7 @@ public class Main extends Configured implements Tool {
 	 * which are used by 
 	 * @param bigDataset: sets up the no of user and movies according to the type of dataset:small, big
 	 * @param no_nodes: no of cluster nodes which are accessible for Reduce
+	 * submit
 	 */
 	public static void setup(boolean bigDataset, int no_nodes, String output) {
 		if(bigDataset) {
